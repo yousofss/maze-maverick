@@ -5,12 +5,19 @@
 #include <string>
 #include <iomanip>
 #include <algorithm>
+#include <chrono>
+#include <thread>
 
 using namespace std;
 
 const int START_COLOR = 32;
 const int END_COLOR = 34;
 const int PATH_COLOR = 33;
+
+void clear_screen()
+{
+  cout << "\x1B[2J\x1B[H"; // ANSI escape codes to clear the screen
+}
 
 vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length)
 {
@@ -164,26 +171,26 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
     cin >> command;
     switch (command)
     {
-    case 'W':                           // Move up
-      if (x > 0 && grid[x - 1][y] != 0) // Check if the upper cell is valid and not zero
+    case 'W': // Move up
+      if (x > 0 && grid[x - 1][y] != 0)
       {
         x--; // Decrease the row index
       }
       break;
-    case 'A':                           // Move left
-      if (y > 0 && grid[x][y - 1] != 0) // Check if the left cell is valid and not zero
+    case 'A': // Move left
+      if (y > 0 && grid[x][y - 1] != 0)
       {
         y--; // Decrease the column index
       }
       break;
-    case 'S':                                         // Move down
-      if (x < grid.size() - 1 && grid[x + 1][y] != 0) // Check if the lower cell is valid and not zero
+    case 'S': // Move down
+      if (x < grid.size() - 1 && grid[x + 1][y] != 0)
       {
         x++; // Increase the row index
       }
       break;
-    case 'D':                                            // Move right
-      if (y < grid[0].size() - 1 && grid[x][y + 1] != 0) // Check if the right cell is valid and not zero
+    case 'D': // Move right
+      if (y < grid[0].size() - 1 && grid[x][y + 1] != 0)
       {
         y++;
       }
@@ -200,12 +207,13 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
     x_pos = x;
     y_pos = y;
     path[x][y] = true;
-    display_grid(grid, path);
     cout << "-------------------------------------------" << endl;
-    ;
+    display_grid(grid, path);
+    // this_thread::sleep_for(chrono::milliseconds(600));
+    clear_screen();
+    display_grid(grid, path);
   }
 }
-
 int main()
 {
   int x, y, a_l, a_u, b_l, b_u, path_length;
@@ -220,13 +228,15 @@ int main()
   cin >> path_length;
   while (path_length < min_plen || path_length >= max_plen)
   {
-    cout << "Invalid path length. Please enter a value between (" << min_plen << " , " << max_plen << ") : ";
+    cout << "Invalid path length. Please enter a value between " << min_plen << " and " << max_plen << ": ";
     cin >> path_length;
   }
   cout << "Enter the lower and upper bounds for the path period [a_l, a_u]: ";
   cin >> a_l >> a_u;
   cout << "Enter the lower and upper bounds for the rest of the grid [b_l, b_u]: ";
   cin >> b_l >> b_u;
+  // cout << "Enter the minimum and maximum path length: ";
+  // cin >> min_plen >> max_plen;
 
   vector<vector<int>> grid = create_grid(x, y, a_l, a_u, b_l, b_u, path_length);
   string filename;
@@ -246,8 +256,10 @@ int main()
 
   save_grid(grid, filename, cell_width);
   cout << "Grid saved to " << filename << "\n";
+  // vector<pair<int, int>> path;
   vector<vector<bool>> path(x, vector<bool>(y, false));
   path[0][0] = true; // Mark the start position as part of the path
+  // path.push_back(make_pair(0, 0));
 
   display_grid(grid, path);
   handle_commands(grid, path, x_pos, y_pos);
