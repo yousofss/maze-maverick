@@ -8,7 +8,11 @@
 
 using namespace std;
 
-int x_pos, y_pos;
+const int START_COLOR = 32;
+const int END_COLOR = 34;
+const int PATH_COLOR = 33;
+
+// int x_pos, y_pos;
 
 vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length)
 {
@@ -82,15 +86,15 @@ void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &p
     {
       if (i == 0 && j == 0)
       {
-        cout << "\x1B[32m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the start position in green
+        cout << "\x1B[" << START_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the start position in green
       }
       else if (i == grid.size() - 1 && j == grid[0].size() - 1)
       {
-        cout << "\x1B[34m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the end position in blue
+        cout << "\x1B[" << END_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the end position in blue
       }
       else if (path[i][j])
       {
-        cout << "\x1B[33m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the cells in the path in yellow
+        cout << "\x1B[" << PATH_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the cells in the path in yellow
       }
       else
       {
@@ -103,8 +107,9 @@ void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &p
 
 void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int &x, int &y)
 {
-  //vector<pair<int, int>> path;
+  // vector<pair<int, int>> path;
   char command;
+  int x_pos, y_pos;
   cout << "Enter command (W:up, A:left, S:down, D:right) : ";
   while (true)
   {
@@ -140,15 +145,16 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
     case 'G':
       cout << "You gave up. Your final position is (" << x << ", " << y << ").\n";
       return;
-    default: 
+    default:
       cout << "Invalid command. Please try again.\n";
-      continue; 
+      continue;
     }
     x_pos = x;
     y_pos = y;
     path[x][y] = true;
     display_grid(grid, path);
-    cout << "-------------------------------------------"  << endl;;
+    cout << "-------------------------------------------" << endl;
+    ;
   }
 }
 
@@ -184,10 +190,10 @@ int main()
 
   save_grid(grid, filename, cell_width);
   cout << "Grid saved to " << filename << "\n";
-  //vector<pair<int, int>> path;
+  // vector<pair<int, int>> path;
   vector<vector<bool>> path(x, vector<bool>(y, false));
   path[0][0] = true; // Mark the start position as part of the path
-  //path.push_back(make_pair(0, 0));
+  // path.push_back(make_pair(0, 0));
 
   display_grid(grid, path);
   handle_commands(grid, path, x_pos, y_pos);
