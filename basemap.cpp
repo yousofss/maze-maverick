@@ -12,8 +12,6 @@ const int START_COLOR = 32;
 const int END_COLOR = 34;
 const int PATH_COLOR = 33;
 
-// int x_pos, y_pos;
-
 vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length)
 {
   vector<vector<int>> grid(x, vector<int>(y, 0));
@@ -23,26 +21,76 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
   uniform_int_distribution<> dis_a(a_l, a_u);
   uniform_int_distribution<> dis_b(b_l, b_u);
 
-  // Generate the path
-  for (int i = 0; i < path_length; i++)
+  int current_x = 0;
+  int current_y = 0;
+  int path_sum = 0;
+
+  for (int i = 0; i < path_length - 1; i++) // Ensure the last step reaches [x][y]
   {
-    int x_pos = i / y;
-    int y_pos = i % y;
+    int direction = gen() % 4; // 0: up, 1: left, 2: down, 3: right
+
+    switch (direction)
+    {
+    case 0: // Move up
+      if (current_x > 0)
+        current_x--;
+      break;
+    case 1: // Move left
+      if (current_y > 0)
+        current_y--;
+      break;
+    case 2: // Move down
+      if (current_x < x - 1)
+        current_x++;
+      break;
+    case 3: // Move right
+      if (current_y < y - 1)
+        current_y++;
+      break;
+    }
     int num;
     do
     {
       num = dis_a(gen);
     } while (num == 0);
-    grid[x_pos][y_pos] = num;
-    path[x_pos][y_pos] = true;
+
+    path_sum += num;
+
+    grid[current_x][current_y] = num;
+    path[current_x][current_y] = true;
   }
 
-  // Fill the rest of the grid
-  for (int i = path_length; i < x * y; i++)
+  // last step must leads to [x][y]
+  int remaining_x_steps = x - 1 - current_x;
+  int remaining_y_steps = y - 1 - current_y;
+
+  for (int i = 0; i < remaining_x_steps; i++)
   {
-    int x_pos = i / y;
-    int y_pos = i % y;
-    grid[x_pos][y_pos] = dis_b(gen);
+    current_x++;
+    int num = dis_a(gen);
+    path_sum += num;
+    grid[current_x][current_y] = num;
+    path[current_x][current_y] = true;
+  }
+
+  for (int i = 0; i < remaining_y_steps; i++)
+  {
+    current_y++;
+    int num = dis_a(gen);
+    path_sum += num;
+    grid[current_x][current_y] = num;
+    path[current_x][current_y] = true;
+  }
+
+  for (int i = 0; i < x; i++)
+  {
+    for (int j = 0; j < y; j++)
+    {
+      if (!path[i][j])
+      {
+        grid[i][j] = dis_b(gen);
+      }
+    }
   }
 
   return grid;
@@ -161,12 +209,20 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
 int main()
 {
   int x, y, a_l, a_u, b_l, b_u, path_length;
+  int min_plen, max_plen;
   cout << "Enter the number of rows: ";
   cin >> x;
   cout << "Enter the number of columns: ";
   cin >> y;
+  min_plen = x + y - 2;
+  max_plen = x * y - 2;
   cout << "Enter the path length: ";
   cin >> path_length;
+  while (path_length < min_plen || path_length >= max_plen)
+  {
+    cout << "Invalid path length. Please enter a value between (" << min_plen << " , " << max_plen << ") : ";
+    cin >> path_length;
+  }
   cout << "Enter the lower and upper bounds for the path period [a_l, a_u]: ";
   cin >> a_l >> a_u;
   cout << "Enter the lower and upper bounds for the rest of the grid [b_l, b_u]: ";
@@ -190,10 +246,8 @@ int main()
 
   save_grid(grid, filename, cell_width);
   cout << "Grid saved to " << filename << "\n";
-  // vector<pair<int, int>> path;
   vector<vector<bool>> path(x, vector<bool>(y, false));
   path[0][0] = true; // Mark the start position as part of the path
-  // path.push_back(make_pair(0, 0));
 
   display_grid(grid, path);
   handle_commands(grid, path, x_pos, y_pos);
