@@ -11,27 +11,33 @@
 using namespace std;
 namespace fs = std::filesystem;
 
+random_device rd;
+mt19937 gen(rd());
 const int START_COLOR = 32;
 const int END_COLOR = 34;
 const int PATH_COLOR = 33;
-int path_length;
+int path_length, path_sum;
 void clear_screen()
 {
     cout << "\x1B[2J\x1B[H"; // ANSI escape codes to clear the screen
 }
-int getRandomInt(int a_l, int a_u, mt19937 &gen);
+int getRandomInt(int a_l, int a_u, mt19937 &gen)
+{
+    uniform_int_distribution<> dis_a(a_l, a_u);
+    return dis_a(gen);
+}
 
-void recursiveBacktrack(vector<vector<int>> &grid, vector<vector<bool>> &path, int x, int y, int a_l, int a_u, int b_l, int b_u, int &path_sum, int current_x, int current_y, mt19937 &gen);
+void HardMood();
 
-vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length);
+void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int destY, int a_l, int a_u, int b_l, int b_u, int &path_sum, mt19937 &gen);
+
+vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen);
 
 void save_grid(const vector<vector<int>> &grid, const string &filename, int cell_width, int path_length);
 
 void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &path);
 
 void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int &x, int &y, int &path_length);
-
-void HardMood();
 
 void displayMaps()
 {
@@ -205,79 +211,54 @@ int main()
     do_Choice(subchoice);
     return 0;
 }
-// Function to generate a random integer between a_l and a_u (inclusive)
-int getRandomInt(int a_l, int a_u, mt19937 &gen)
-{
-    uniform_int_distribution<> dis_a(a_l, a_u);
-    return dis_a(gen);
-}
 
-// Function to perform recursive backtracking to create the path
-
-void recursiveBacktrack(vector<vector<int>> &grid, vector<vector<bool>> &path, int x, int y, int a_l, int a_u, int b_l, int b_u, int &path_sum, int current_x, int current_y, mt19937 &gen)
+// Function to perform recursive backtracking and generate a path
+void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int destY, int a_l, int a_u, int b_l, int b_u, int &path_sum, mt19937 &gen)
 {
-    if (current_x < 0 || current_x >= x || current_y < 0 || current_y >= y || path[current_x][current_y])
+    if (x < 0 || x >= grid.size() || y < 0 || y >= grid[0].size() || grid[x][y] != 0)
     {
-        return; // Stop if out of bounds or already visited
+        return;
     }
 
-    int num = getRandomInt(a_l, a_u, gen); // Adjust the range as needed
-    if (num == 0)
+    if (x == destX && y == destY)
     {
-        num = getRandomInt(b_l, b_u, gen);
+        grid[x][y] = path_sum;
+        return;
     }
-    path_sum += num;
 
-    grid[current_x][current_y] = num;
-    path[current_x][current_y] = true;
-
-    // Perform recursive backtracking in a random order (shuffle directions)
-    vector<int> directions = {0, 1, 2, 3}; // 0 : move up 1 : move left 2 : move down 3: move right
-    shuffle(directions.begin(), directions.end(), gen);
-
-    for (int direction : directions)
+    grid[x][y] = getRandomInt(a_l, a_u, gen);
+    if (grid[x][y] == 0)
     {
-        int new_x = current_x, new_y = current_y;
+        grid[x][y] = getRandomInt(a_l, a_u, gen);
+    }
+    path_sum += grid[x][y];
 
-        switch (direction)
-        {
-        case 0:
-            new_x--;
-            break;
-        case 1:
-            new_y--;
-            break;
-        case 2:
-            new_x++;
-            break;
-        case 3:
-            new_y++;
-            break;
-        }
+    // Shuffle Orientations for randomness
+    vector<pair<int, int>> Orientations = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+    shuffle(Orientations.begin(), Orientations.end(), gen);
+    for (const auto &Orientation : Orientations)
+    {
+        int newX = x + Orientation.first;
+        int newY = y + Orientation.second;
 
-        recursiveBacktrack(grid, path, x, y, a_l, a_u, b_l, b_u, path_sum, new_x, new_y, gen);
+        recursiveBacktrack(grid, newX, newY, destX, destY, a_l, a_u, b_l, b_u, path_sum, gen);
     }
 }
 
-vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length)
+vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen)
 {
     vector<vector<int>> grid(x, vector<int>(y, 0));
-    vector<vector<bool>> path(x, vector<bool>(y, false));
-    random_device rd;
-    mt19937 gen(rd());
-
-    int current_x = 0;
-    int current_y = 0;
     int path_sum = 0;
 
-    recursiveBacktrack(grid, path, x, y, a_l, a_u, b_l, b_u, path_sum, current_x, current_y, gen);
+    // Generate path with random numbers within the range [a_l, a_u] excluding 0
+    recursiveBacktrack(grid, 0, 0, x - 1, y - 1, a_l, a_u, b_l, b_u, path_sum, gen);
 
     // Fill the remaining cells with random values
     for (int i = 0; i < x; i++)
     {
         for (int j = 0; j < y; j++)
         {
-            if (!path[i][j])
+            if (grid[i][j] == 0)
             {
                 grid[i][j] = getRandomInt(b_l, b_u, gen);
             }
@@ -557,7 +538,7 @@ void HardMood()
     cout << "Enter the lower and upper bounds for the rest of the grid [b_l, b_u]: ";
     cin >> b_l >> b_u;
     vector<vector<int>>
-        grid = create_grid(x, y, a_l, a_u, b_l, b_u, path_length);
+        grid = create_grid(x, y, a_l, a_u, b_l, b_u, path_length, gen);
     string filename;
     cout << "Say your grid name : ";
     cin >> filename;
