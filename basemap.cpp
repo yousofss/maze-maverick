@@ -19,6 +19,9 @@ void clear_screen()
 {
     cout << "\x1B[2J\x1B[H"; // ANSI escape codes to clear the screen
 }
+int getRandomInt(int a_l, int a_u, mt19937 &gen);
+
+void recursiveBacktrack(vector<vector<int>> &grid, vector<vector<bool>> &path, int x, int y, int a_l, int a_u, int b_l, int b_u, int &path_sum, int current_x, int current_y, mt19937 &gen);
 
 vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length);
 
@@ -202,6 +205,59 @@ int main()
     do_Choice(subchoice);
     return 0;
 }
+// Function to generate a random integer between a_l and a_u (inclusive)
+int getRandomInt(int a_l, int a_u, mt19937 &gen)
+{
+    uniform_int_distribution<> dis_a(a_l, a_u);
+    return dis_a(gen);
+}
+
+// Function to perform recursive backtracking to create the path
+
+void recursiveBacktrack(vector<vector<int>> &grid, vector<vector<bool>> &path, int x, int y, int a_l, int a_u, int b_l, int b_u, int &path_sum, int current_x, int current_y, mt19937 &gen)
+{
+    if (current_x < 0 || current_x >= x || current_y < 0 || current_y >= y || path[current_x][current_y])
+    {
+        return; // Stop if out of bounds or already visited
+    }
+
+    int num = getRandomInt(a_l, a_u, gen); // Adjust the range as needed
+    if (num == 0)
+    {
+        num = getRandomInt(b_l, b_u, gen);
+    }
+    path_sum += num;
+
+    grid[current_x][current_y] = num;
+    path[current_x][current_y] = true;
+
+    // Perform recursive backtracking in a random order (shuffle directions)
+    vector<int> directions = {0, 1, 2, 3}; // 0 : move up 1 : move left 2 : move down 3: move right
+    shuffle(directions.begin(), directions.end(), gen);
+
+    for (int direction : directions)
+    {
+        int new_x = current_x, new_y = current_y;
+
+        switch (direction)
+        {
+        case 0:
+            new_x--;
+            break;
+        case 1:
+            new_y--;
+            break;
+        case 2:
+            new_x++;
+            break;
+        case 3:
+            new_y++;
+            break;
+        }
+
+        recursiveBacktrack(grid, path, x, y, a_l, a_u, b_l, b_u, path_sum, new_x, new_y, gen);
+    }
+}
 
 vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length)
 {
@@ -209,77 +265,21 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
     vector<vector<bool>> path(x, vector<bool>(y, false));
     random_device rd;
     mt19937 gen(rd());
-    uniform_int_distribution<> dis_a(a_l, a_u);
-    uniform_int_distribution<> dis_b(b_l, b_u);
 
     int current_x = 0;
     int current_y = 0;
     int path_sum = 0;
 
-    for (int i = 0; i < path_length - 1; i++) // Ensure the last step reaches [x][y]
-    {
-        int direction = gen() % 4; // 0: up, 1: left, 2: down, 3: right
+    recursiveBacktrack(grid, path, x, y, a_l, a_u, b_l, b_u, path_sum, current_x, current_y, gen);
 
-        switch (direction)
-        {
-        case 0: // Move up
-            if (current_x > 0)
-                current_x--;
-            break;
-        case 1: // Move left
-            if (current_y > 0)
-                current_y--;
-            break;
-        case 2: // Move down
-            if (current_x < x - 1)
-                current_x++;
-            break;
-        case 3: // Move right
-            if (current_y < y - 1)
-                current_y++;
-            break;
-        }
-        int num;
-        do
-        {
-            num = dis_a(gen);
-        } while (num == 0);
-
-        path_sum += num;
-
-        grid[current_x][current_y] = num;
-        path[current_x][current_y] = true;
-    }
-
-    // last step must leads to [x][y]
-    int remaining_x_steps = x - 1 - current_x;
-    int remaining_y_steps = y - 1 - current_y;
-
-    for (int i = 0; i < remaining_x_steps; i++)
-    {
-        current_x++;
-        int num = dis_a(gen);
-        path_sum += num;
-        grid[current_x][current_y] = num;
-        path[current_x][current_y] = true;
-    }
-
-    for (int i = 0; i < remaining_y_steps; i++)
-    {
-        current_y++;
-        int num = dis_a(gen);
-        path_sum += num;
-        grid[current_x][current_y] = num;
-        path[current_x][current_y] = true;
-    }
-
+    // Fill the remaining cells with random values
     for (int i = 0; i < x; i++)
     {
         for (int j = 0; j < y; j++)
         {
             if (!path[i][j])
             {
-                grid[i][j] = dis_b(gen);
+                grid[i][j] = getRandomInt(b_l, b_u, gen);
             }
         }
     }
