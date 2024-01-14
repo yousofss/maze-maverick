@@ -1,4 +1,3 @@
-#include <iostream>
 #include <sstream>
 #include <vector>
 #include <fstream>
@@ -8,9 +7,15 @@
 #include <algorithm>
 #include <filesystem>
 #include <chrono>
+#include <iostream>
+
+#define TEXTTABLE_ENCODE_MULTIBYTE_STRINGS
+#define TEXTTABLE_USE_EN_US_UTF8
+
+#include "TextTable.h"
 
 using namespace std;
-namespace fs = std::filesystem;
+namespace fs = filesystem;
 
 random_device rd;
 mt19937 gen(rd());
@@ -32,6 +37,8 @@ int getRandomInt(int a_l, int a_u, mt19937 &gen)
 
 void HardMood();
 
+void saverec(const string &playerName, const chrono::seconds &game_duration, const string &filename);
+
 void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int destY, int a_l, int a_u, int b_l, int b_u, int &path_sum, mt19937 &gen);
 
 vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen);
@@ -42,15 +49,67 @@ void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &p
 
 void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int &x, int &y, int &path_length, const string &playername);
 
-void displayMaps()
-{
-    string pathaddress = "./Maps"; // path to the Maps directory
-    int index = 1;
+void displayMaps();
 
-    for (const auto &entry : fs::directory_iterator(pathaddress))
+struct PlayerRecord
+{
+    string playerName;
+    int duration;
+
+    bool operator<(const PlayerRecord &other) const
     {
-        cout << index << ". " << entry.path().filename() << endl;
-        index++;
+        return duration < other.duration;
+    }
+};
+
+void diplayrec(const string &filename)
+{
+    ifstream historyFile(filename);
+    if (historyFile.is_open())
+    {
+        vector<PlayerRecord> playerRecords;
+
+        string line;
+        while (getline(historyFile, line))
+        {
+            istringstream iss(line);
+            string playerName;
+            int duration;
+
+            if (getline(iss, playerName, ',') && iss >> duration)
+            {
+                playerRecords.push_back({playerName, duration});
+            }
+        }
+
+        sort(playerRecords.begin(), playerRecords.end());
+
+        TextTable rec;
+        rec.setAlignment(0, TextTable::Alignment::LEFT);
+        rec.setAlignment(1, TextTable::Alignment::LEFT);
+        rec.setAlignment(2, TextTable::Alignment::RIGHT);
+
+        rec.add("Rank");
+        rec.add("Player");
+        rec.add("Duration (seconds)");
+        rec.endOfRow();
+
+        for (size_t i = 0; i < playerRecords.size(); ++i)
+        {
+            rec.add(to_string(i + 1));                     // Rank
+            rec.add(playerRecords[i].playerName);          // Player
+            rec.add(to_string(playerRecords[i].duration)); // Duration
+            rec.endOfRow();
+        }
+
+        cout << "Record Table:\n"
+             << rec << endl;
+
+        historyFile.close();
+    }
+    else
+    {
+        cout << "Unable to open " << filename << " for reading player history.\n";
     }
 }
 
@@ -88,19 +147,25 @@ void Select_Choice(int choice)
     }
     else if (choice == 4)
     {
-        cout << "null4" << endl;
+        diplayrec("player_history.csv");
+        displayMenu();
+        cin >> choice;
+        Select_Choice(choice);
     }
     else if (choice == 5)
     {
         cout << "null5" << endl;
+        return;
     }
     else if (choice == 6)
     {
-        cout << "null6" << endl;
+        return;
     }
     else
     {
         cout << "Invalid choice" << endl;
+        displayMenu();
+        cin >> choice;
         Select_Choice(choice);
     }
 }
@@ -118,8 +183,7 @@ void do_Choice(double &subchoice)
         string mapName;
         cin >> mapName;
 
-        // Load the map using the mapName
-        ifstream file("./Maps/" + mapName); // Assuming the maps are in the "./Maps/" directory
+        ifstream file("./Maps/" + mapName); // all maps are in the "./Maps/" directory
         if (file.is_open())
         {
             string line;
@@ -141,7 +205,7 @@ void do_Choice(double &subchoice)
 
             path_length = read_path_length;
             cout << path_length;
-            // Read the grid from the file (similar to save_grid function)
+
             vector<vector<int>> grid;
 
             while (getline(file, line))
@@ -160,7 +224,7 @@ void do_Choice(double &subchoice)
             int x_pos = 0;
             int y_pos = 0;
             vector<vector<bool>> path(grid.size(), vector<bool>(grid[0].size(), false));
-            path[0][0] = true; // Mark the start position as part of the path
+            path[0][0] = true;
 
             display_grid(grid, path);
             handle_commands(grid, path, x_pos, y_pos, path_length, playername);
@@ -176,13 +240,12 @@ void do_Choice(double &subchoice)
         string gridPath;
         cin >> gridPath;
 
-        // Load the grid using the gridPath
         ifstream file(gridPath);
         if (file.is_open())
         {
-            // Read the grid from the file and play
+            
             vector<vector<int>> grid;
-            // Read the grid from the file (similar to save_grid function)
+            
             int cell_value;
             while (file >> cell_value)
             {
@@ -191,8 +254,7 @@ void do_Choice(double &subchoice)
             int x_pos = 0;
             int y_pos = 0;
             vector<vector<bool>> path(grid.size(), vector<bool>(grid[0].size(), false));
-            path[0][0] = true; // Mark the start position as part of the path
-
+            path[0][0] = true; 
             display_grid(grid, path);
             handle_commands(grid, path, x_pos, y_pos, path_length, playername);
         }
@@ -203,7 +265,37 @@ void do_Choice(double &subchoice)
     }
 }
 
-void savePlayerHistory(const string &playerName, const chrono::seconds &game_duration, const string &filename)
+int main()
+{
+    int rows, columns, pathLength, minCellValue, maxCellValue;
+    cout << "Enter your name: ";
+    getline(cin, playername);
+    cout << "Hello, " + playername + " Welcome to Maze Maverick\n";
+    displayMenu();
+    int choice;
+    cout << "Enter your choice: " << endl;
+    cin >> choice;
+    Select_Choice(choice);
+    double subchoice;
+    cin >> subchoice;
+    do_Choice(subchoice);
+
+    return 0;
+}
+
+void displayMaps()
+{
+    string pathaddress = "./Maps";
+    int index = 1;
+
+    for (const auto &entry : fs::directory_iterator(pathaddress))
+    {
+        cout << index << ". " << entry.path().filename() << endl;
+        index++;
+    }
+}
+
+void saverec(const string &playerName, const chrono::seconds &game_duration, const string &filename)
 {
     ofstream historyFile(filename, ios::app);
     if (historyFile.is_open())
@@ -217,23 +309,6 @@ void savePlayerHistory(const string &playerName, const chrono::seconds &game_dur
     }
 }
 
-int main()
-{
-    int rows, columns, pathLength, minCellValue, maxCellValue;
-    cout << "Enter your name: ";
-    cin >> playername;
-    cout << "Hello, " + playername + " Welcome to Maze Maverick\n";
-    displayMenu();
-    int choice;
-    cout << "Enter your choice: " << endl;
-    cin >> choice;
-    Select_Choice(choice);
-    double subchoice;
-    cin >> subchoice;
-    do_Choice(subchoice);
-
-    return 0;
-}
 void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int destY, int a_l, int a_u, int b_l, int b_u, int &path_sum, mt19937 &gen)
 {
     if (x < 0 || x >= grid.size() || y < 0 || y >= grid[0].size() || grid[x][y] != 0)
@@ -417,9 +492,9 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
 
         if ((moves >= path_length) || (x == grid.size() - 1 && y == grid[0].size() - 1))
         {
-            savePlayerHistory(playername, game_duration, "player_history.csv");
             if (x == grid.size() - 1 && y == grid[0].size() - 1)
             {
+                saverec(playername, game_duration, "player_history.csv");
                 cout << "YOU WON!\n";
                 int choice;
                 double subchoice;
@@ -436,7 +511,6 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                     path = vector<vector<bool>>(grid.size(), vector<bool>(grid[0].size(), false));
                     path[0][0] = true;
 
-                    // Show the menu again
                     do
                     {
                         displayMenu();
@@ -459,7 +533,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                             Select_Choice(choice);
                             break;
                         case 4:
-                            cout << "History option selected. (To be implemented)\n";
+                            Select_Choice(choice);
                             break;
                         case 5:
                             cout << "Leaderboard option selected. (To be implemented)\n";
@@ -481,7 +555,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                     return;
                 }
             }
-            if (x == grid.size() - 1 && y == grid[0].size() - 1)
+            else
             {
                 cout << "YOU LOSE! Reached maximum allowed moves\n";
                 int choice;
@@ -500,7 +574,6 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                     path = vector<vector<bool>>(grid.size(), vector<bool>(grid[0].size(), false));
                     path[0][0] = true;
 
-                    // Show the menu again
                     do
                     {
                         displayMenu();
@@ -523,7 +596,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                             Select_Choice(choice);
                             break;
                         case 4:
-                            cout << "History option selected. (To be implemented)\n";
+                            Select_Choice(choice);
                             break;
                         case 5:
                             cout << "Leaderboard option selected. (To be implemented)\n";
