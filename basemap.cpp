@@ -12,7 +12,7 @@
 #define TEXTTABLE_ENCODE_MULTIBYTE_STRINGS
 #define TEXTTABLE_USE_EN_US_UTF8
 
-#include "TextTable.h"
+#include "table.h"
 
 using namespace std;
 namespace fs = filesystem;
