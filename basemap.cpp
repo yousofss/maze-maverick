@@ -213,7 +213,7 @@ int main()
 }
 
 // Function to perform recursive backtracking and generate a path
-void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int destY, int a_l, int a_u, int b_l, int b_u, int &path_sum, mt19937 &gen)
+void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int destY, int a_l, int a_u, int &path_sum, mt19937 &gen, vector<pair<int, int>> &pathCells, int &maxPathCells)
 {
     if (x < 0 || x >= grid.size() || y < 0 || y >= grid[0].size() || grid[x][y] != 0)
     {
@@ -223,6 +223,12 @@ void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int 
     if (x == destX && y == destY)
     {
         grid[x][y] = path_sum;
+        pathCells.push_back({x, y});
+        return;
+    }
+
+    if (maxPathCells <= 0)
+    { // Check if maximum path length is reached
         return;
     }
 
@@ -232,26 +238,44 @@ void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int 
         grid[x][y] = getRandomInt(a_l, a_u, gen);
     }
     path_sum += grid[x][y];
+    pathCells.push_back({x, y});
+    maxPathCells--; // Decrement the number of remaining cells that can be added to the path
 
-    // Shuffle Orientations for randomness
     vector<pair<int, int>> Orientations = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
     shuffle(Orientations.begin(), Orientations.end(), gen);
+
     for (const auto &Orientation : Orientations)
     {
         int newX = x + Orientation.first;
         int newY = y + Orientation.second;
 
-        recursiveBacktrack(grid, newX, newY, destX, destY, a_l, a_u, b_l, b_u, path_sum, gen);
+        int savedPathSum = path_sum;
+        vector<pair<int, int>> savedPath = pathCells;
+        int savedMaxPathCells = maxPathCells;
+
+        recursiveBacktrack(grid, newX, newY, destX, destY, a_l, a_u, path_sum, gen, pathCells, maxPathCells);
+
+        if (grid[destX][destY] != 0)
+        {
+            return; // Path found
+        }
+        else
+        {
+            path_sum = savedPathSum;
+            pathCells = savedPath;
+            maxPathCells = savedMaxPathCells;
+        }
     }
 }
 
 vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen)
 {
     vector<vector<int>> grid(x, vector<int>(y, 0));
+    vector<pair<int, int>> pathCells(path_length);
     int path_sum = 0;
 
     // Generate path with random numbers within the range [a_l, a_u] excluding 0
-    recursiveBacktrack(grid, 0, 0, x - 1, y - 1, a_l, a_u, b_l, b_u, path_sum, gen);
+    recursiveBacktrack(grid, 0, 0, x - 1, y - 1, a_l, a_u, path_sum, gen, pathCells, path_length);
 
     // Fill the remaining cells with random values
     for (int i = 0; i < x; i++)
@@ -264,7 +288,19 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
             }
         }
     }
-
+    // change some non-path cells to 0 but not the start and end cells and also not the cells in the path (pathCells)
+    int num_cells_to_change = getRandomInt(b_l, b_u, gen);
+    int cells_changed = 0;
+    while (cells_changed < num_cells_to_change)
+    {
+        int x_pos = getRandomInt(0, x - 1, gen);
+        int y_pos = getRandomInt(0, y - 1, gen);
+        if (!(x_pos == 0 && y_pos == 0) && !(x_pos == x - 1 && y_pos == y - 1) && find(pathCells.begin(), pathCells.end(), make_pair(x_pos, y_pos)) == pathCells.end())
+        {
+            grid[x_pos][y_pos] = 0;
+            cells_changed++;
+        }
+    }
     return grid;
 }
 
