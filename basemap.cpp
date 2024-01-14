@@ -380,7 +380,7 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
         {
             if (grid[i][j] == 0)
             {
-                grid[i][j] = getRandomInt(b_l, b_u, gen);
+                grid[i][j] = getRandomInt(a_l, a_u, gen);
             }
         }
     }
@@ -472,42 +472,114 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
     char command;
     int x_pos, y_pos;
     int moves = 0;
-
+    int playsum = 0;
+    int ncount = 4;
     cout << "Enter command (W:up, A:left, S:down, D:right) : ";
-
     while (true)
     {
         cin >> command;
         moves++;
+        if (ncount == 0)
+        {
+            cout << "You got to deadend ." << endl;
+            cout << "if you want to play again (A or a) , if you want Quite (Q or q) : ";
+            int choice;
+            double subchoice;
+            char playAgain;
+            cin >> playAgain;
 
+            if (playAgain == 'Y' || playAgain == 'y')
+            {
+                // Reset the game state
+                x = 0;
+                y = 0;
+                path = vector<vector<bool>>(grid.size(), vector<bool>(grid[0].size(), false));
+                path[0][0] = true;
+
+                do
+                {
+                    displayMenu();
+                    cout << "Enter your choice: ";
+                    cin >> choice;
+
+                    switch (choice)
+                    {
+                    case 1:
+                        Select_Choice(choice);
+                        cin >> subchoice;
+                        do_Choice(subchoice);
+                        break;
+                    case 2:
+                        Select_Choice(choice);
+                        cin >> subchoice;
+                        do_Choice(subchoice);
+                        break;
+                    case 3:
+                        Select_Choice(choice);
+                        break;
+                    case 4:
+                        Select_Choice(choice);
+                        break;
+                    case 5:
+                        cout << "Leaderboard option selected. (To be implemented)\n";
+                        break;
+                    case 6:
+                        cout << "Exiting the program. Goodbye!\n";
+                        return;
+                    default:
+                        cout << "Invalid choice. Please try again.\n";
+                        break;
+                    }
+                } while (choice != 6);
+
+                continue;
+            }
+            else
+            {
+                cout << "GOOD GAME!\n";
+                return;
+            }
+        }
         switch (command)
         {
         case 'W': // Move up
         case 'w':
-            if (x > 0 && grid[x - 1][y] != 0 && !path[x - 1][y])
+            x--;                                         // Decrease the row index
+            if (x <= 0 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
             {
-                x--; // Decrease the row index
+                x++;
+                moves--;
+                ncount--;
             }
             break;
         case 'A': // Move left
         case 'a':
-            if (y > 0 && grid[x][y - 1] != 0 && !path[x][y - 1])
+            y--;                                         // Decrease the column index
+            if (y <= 0 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
             {
-                y--; // Decrease the column index
+                y++;
+                moves--;
+                ncount--;
             }
             break;
         case 'S': // Move down
         case 's':
-            if (x < grid.size() - 1 && grid[x + 1][y] != 0 && !path[x + 1][y])
+            x++;                                                      // Increase the row index
+            if (x > grid.size() - 1 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
             {
-                x++; // Increase the row index
+                x--;
+                moves--;
+                ncount--;
             }
             break;
         case 'D': // Move right
         case 'd':
-            if (y < grid[0].size() - 1 && grid[x][y + 1] != 0 && !path[x][y + 1])
+            y++;                                                         // increase the column index
+            if (y > grid[0].size() - 1 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
             {
-                y++;
+                y--;
+                moves--;
+                ncount--;
             }
             break;
         case 'Q':
@@ -516,22 +588,81 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
         case 'G':
         case 'g':
             cout << "You gave up. Your final position is (" << x << ", " << y << ").\n";
+            cout << "if you want to play again (A or a) , if you want Quit (Q or q) : ";
+            int choice;
+            double subchoice;
+            char playAgain;
+            cin >> playAgain;
+
+            if (playAgain == 'Y' || playAgain == 'y')
+            {
+                // Reset the game state
+                x = 0;
+                y = 0;
+                path = vector<vector<bool>>(grid.size(), vector<bool>(grid[0].size(), false));
+                path[0][0] = true;
+
+                do
+                {
+                    displayMenu();
+                    cout << "Enter your choice: ";
+                    cin >> choice;
+
+                    switch (choice)
+                    {
+                    case 1:
+                        Select_Choice(choice);
+                        cin >> subchoice;
+                        do_Choice(subchoice);
+                        break;
+                    case 2:
+                        Select_Choice(choice);
+                        cin >> subchoice;
+                        do_Choice(subchoice);
+                        break;
+                    case 3:
+                        Select_Choice(choice);
+                        break;
+                    case 4:
+                        Select_Choice(choice);
+                        break;
+                    case 5:
+                        cout << "Leaderboard option selected. (To be implemented)\n";
+                        break;
+                    case 6:
+                        cout << "Exiting the program. Goodbye!\n";
+                        return;
+                    default:
+                        cout << "Invalid choice. Please try again.\n";
+                        break;
+                    }
+                } while (choice != 6);
+
+                continue;
+            }
+            else
+            {
+                cout << "GOOD GAME!\n";
+                return;
+            }
             return;
         default:
             cout << "Invalid command. Please try again.\n";
+            moves--;
             continue;
         }
 
         x_pos = x;
         y_pos = y;
         path[x][y] = true;
+        playsum += grid[x][y];
 
         auto current_time = chrono::steady_clock::now();
         game_duration = chrono::duration_cast<chrono::seconds>(current_time - start_time);
 
         if ((moves >= path_length) || (x == grid.size() - 1 && y == grid[0].size() - 1))
         {
-            if (x == grid.size() - 1 && y == grid[0].size() - 1)
+            if ((x == grid.size() - 1 && y == grid[0].size() - 1) && ((moves == path_length) && (playsum == grid[x][y])))
             {
                 saverec(playername, game_duration, "player_history.csv");
                 cout << "YOU WON!\n";
@@ -596,7 +727,15 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             }
             else
             {
-                cout << "YOU LOSE! Reached maximum allowed moves\n";
+                if ((x == grid.size() - 1 && y == grid[0].size() - 1) && ((moves == path_length) && (playsum != grid[x][y])))
+                {
+                    cout << "YOU LOSE! Path you founded is wrong Sum is: " << playsum << endl;
+                }
+                else
+                {
+                    cout << "YOU LOSE! Reached maximum allowed moves\n";
+                }
+                
                 int choice;
                 double subchoice;
 
