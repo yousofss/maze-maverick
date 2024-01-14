@@ -1,4 +1,3 @@
-#include <iostream>
 #include <sstream>
 #include <vector>
 #include <fstream>
@@ -7,9 +6,16 @@
 #include <iomanip>
 #include <algorithm>
 #include <filesystem>
+#include <chrono>
+#include <iostream>
+
+#define TEXTTABLE_ENCODE_MULTIBYTE_STRINGS
+#define TEXTTABLE_USE_EN_US_UTF8
+
+#include "TextTable.h"
 
 using namespace std;
-namespace fs = std::filesystem;
+namespace fs = filesystem;
 
 random_device rd;
 mt19937 gen(rd());
@@ -17,6 +23,8 @@ const int START_COLOR = 32;
 const int END_COLOR = 34;
 const int PATH_COLOR = 33;
 int path_length, path_sum;
+string playername;
+
 void clear_screen()
 {
     cout << "\x1B[2J\x1B[H"; // ANSI escape codes to clear the screen
@@ -29,6 +37,8 @@ int getRandomInt(int a_l, int a_u, mt19937 &gen)
 
 void HardMood();
 
+void saverec(const string &playerName, const chrono::seconds &game_duration, const string &filename);
+
 void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int destY, int a_l, int a_u, int b_l, int b_u, int &path_sum, mt19937 &gen);
 
 vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen);
@@ -37,19 +47,72 @@ void save_grid(const vector<vector<int>> &grid, const string &filename, int cell
 
 void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &path);
 
-void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int &x, int &y, int &path_length);
+void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int &x, int &y, int &path_length, const string &playername);
 
-void displayMaps()
+void displayMaps();
+
+struct PlayerRecord
 {
-    string pathaddress = "./Maps"; // path to the Maps directory
-    int index = 1;
+    string playerName;
+    int duration;
 
-    for (const auto &entry : fs::directory_iterator(pathaddress))
+    bool operator<(const PlayerRecord &other) const
     {
-        cout << index << ". " << entry.path().filename() << endl;
-        index++;
+        return duration < other.duration;
+    }
+};
+
+void diplayrec(const string &filename)
+{
+    ifstream historyFile(filename);
+    if (historyFile.is_open())
+    {
+        vector<PlayerRecord> playerRecords;
+
+        string line;
+        while (getline(historyFile, line))
+        {
+            istringstream iss(line);
+            string playerName;
+            int duration;
+
+            if (getline(iss, playerName, ',') && iss >> duration)
+            {
+                playerRecords.push_back({playerName, duration});
+            }
+        }
+
+        sort(playerRecords.begin(), playerRecords.end());
+
+        TextTable rec;
+        rec.setAlignment(0, TextTable::Alignment::LEFT);
+        rec.setAlignment(1, TextTable::Alignment::LEFT);
+        rec.setAlignment(2, TextTable::Alignment::RIGHT);
+
+        rec.add("Rank");
+        rec.add("Player");
+        rec.add("Duration (seconds)");
+        rec.endOfRow();
+
+        for (size_t i = 0; i < playerRecords.size(); ++i)
+        {
+            rec.add(to_string(i + 1));                     // Rank
+            rec.add(playerRecords[i].playerName);          // Player
+            rec.add(to_string(playerRecords[i].duration)); // Duration
+            rec.endOfRow();
+        }
+
+        cout << "Record Table:\n"
+             << rec << endl;
+
+        historyFile.close();
+    }
+    else
+    {
+        cout << "Unable to open " << filename << " for reading player history.\n";
     }
 }
+
 void displayMenu()
 {
     cout << "----- Maze Maverick Menu -----" << endl;
@@ -61,6 +124,7 @@ void displayMenu()
     cout << "6. Exit" << endl;
     return;
 }
+
 void Select_Choice(int choice)
 {
     if (choice == 1)
@@ -83,19 +147,25 @@ void Select_Choice(int choice)
     }
     else if (choice == 4)
     {
-        cout << "null4" << endl;
+        diplayrec("player_history.csv");
+        displayMenu();
+        cin >> choice;
+        Select_Choice(choice);
     }
     else if (choice == 5)
     {
         cout << "null5" << endl;
+        return;
     }
     else if (choice == 6)
     {
-        cout << "null6" << endl;
+        return;
     }
     else
     {
         cout << "Invalid choice" << endl;
+        displayMenu();
+        cin >> choice;
         Select_Choice(choice);
     }
 }
@@ -113,8 +183,7 @@ void do_Choice(double &subchoice)
         string mapName;
         cin >> mapName;
 
-        // Load the map using the mapName
-        ifstream file("./Maps/" + mapName); // Assuming the maps are in the "./Maps/" directory
+        ifstream file("./Maps/" + mapName); // all maps are in the "./Maps/" directory
         if (file.is_open())
         {
             string line;
@@ -136,7 +205,7 @@ void do_Choice(double &subchoice)
 
             path_length = read_path_length;
             cout << path_length;
-            // Read the grid from the file (similar to save_grid function)
+
             vector<vector<int>> grid;
 
             while (getline(file, line))
@@ -155,10 +224,10 @@ void do_Choice(double &subchoice)
             int x_pos = 0;
             int y_pos = 0;
             vector<vector<bool>> path(grid.size(), vector<bool>(grid[0].size(), false));
-            path[0][0] = true; // Mark the start position as part of the path
+            path[0][0] = true;
 
             display_grid(grid, path);
-            handle_commands(grid, path, x_pos, y_pos, path_length);
+            handle_commands(grid, path, x_pos, y_pos, path_length, playername);
         }
         else
         {
@@ -171,13 +240,12 @@ void do_Choice(double &subchoice)
         string gridPath;
         cin >> gridPath;
 
-        // Load the grid using the gridPath
         ifstream file(gridPath);
         if (file.is_open())
         {
-            // Read the grid from the file and play
+            
             vector<vector<int>> grid;
-            // Read the grid from the file (similar to save_grid function)
+            
             int cell_value;
             while (file >> cell_value)
             {
@@ -186,10 +254,9 @@ void do_Choice(double &subchoice)
             int x_pos = 0;
             int y_pos = 0;
             vector<vector<bool>> path(grid.size(), vector<bool>(grid[0].size(), false));
-            path[0][0] = true; // Mark the start position as part of the path
-
+            path[0][0] = true; 
             display_grid(grid, path);
-            handle_commands(grid, path, x_pos, y_pos, path_length);
+            handle_commands(grid, path, x_pos, y_pos, path_length, playername);
         }
         else
         {
@@ -200,7 +267,10 @@ void do_Choice(double &subchoice)
 
 int main()
 {
-    int rows, columns, pathLength, minCellValue, maxCellValue, minBlocks, maxBlocks;
+    int rows, columns, pathLength, minCellValue, maxCellValue;
+    cout << "Enter your name: ";
+    getline(cin, playername);
+    cout << "Hello, " + playername + " Welcome to Maze Maverick\n";
     displayMenu();
     int choice;
     cout << "Enter your choice: " << endl;
@@ -209,7 +279,34 @@ int main()
     double subchoice;
     cin >> subchoice;
     do_Choice(subchoice);
+
     return 0;
+}
+
+void displayMaps()
+{
+    string pathaddress = "./Maps";
+    int index = 1;
+
+    for (const auto &entry : fs::directory_iterator(pathaddress))
+    {
+        cout << index << ". " << entry.path().filename() << endl;
+        index++;
+    }
+}
+
+void saverec(const string &playerName, const chrono::seconds &game_duration, const string &filename)
+{
+    ofstream historyFile(filename, ios::app);
+    if (historyFile.is_open())
+    {
+        historyFile << playerName << "," << game_duration.count() << "\n";
+        historyFile.close();
+    }
+    else
+    {
+        cout << "Unable to open " << filename << " for recording player history.\n";
+    }
 }
 
 // Function to perform recursive backtracking and generate a path
@@ -277,7 +374,6 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
     // Generate path with random numbers within the range [a_l, a_u] excluding 0
     recursiveBacktrack(grid, 0, 0, x - 1, y - 1, a_l, a_u, path_sum, gen, pathCells, path_length);
 
-    // Fill the remaining cells with random values
     for (int i = 0; i < x; i++)
     {
         for (int j = 0; j < y; j++)
@@ -306,10 +402,13 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
 
 void save_grid(const vector<vector<int>> &grid, const string &filename, int cell_width, int path_length)
 {
-    ofstream file(filename);
+    string full_filepath = "./Maps/" + filename;
+
+    ofstream file(full_filepath);
+
     if (file.is_open())
     {
-        file << "PathLength: " << path_length << "\n"; // Save path_length at the beginning of the file
+        file << "PathLength: " << path_length << "\n";
 
         for (const auto &row : grid)
         {
@@ -319,7 +418,9 @@ void save_grid(const vector<vector<int>> &grid, const string &filename, int cell
             }
             file << "\n";
         }
+
         file.close();
+        cout << "Grid saved to " << full_filepath << endl;
     }
     else
     {
@@ -363,13 +464,17 @@ void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &p
     }
 }
 
-void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int &x, int &y, int &path_length)
+void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int &x, int &y, int &path_length, const string &playername)
 {
+    chrono::seconds game_duration;
+    auto start_time = chrono::steady_clock::now();
+
     char command;
     int x_pos, y_pos;
     int moves = 0;
 
     cout << "Enter command (W:up, A:left, S:down, D:right) : ";
+
     while (true)
     {
         cin >> command;
@@ -378,32 +483,38 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
         switch (command)
         {
         case 'W': // Move up
+        case 'w':
             if (x > 0 && grid[x - 1][y] != 0 && !path[x - 1][y])
             {
                 x--; // Decrease the row index
             }
             break;
         case 'A': // Move left
+        case 'a':
             if (y > 0 && grid[x][y - 1] != 0 && !path[x][y - 1])
             {
                 y--; // Decrease the column index
             }
             break;
         case 'S': // Move down
+        case 's':
             if (x < grid.size() - 1 && grid[x + 1][y] != 0 && !path[x + 1][y])
             {
                 x++; // Increase the row index
             }
             break;
         case 'D': // Move right
+        case 'd':
             if (y < grid[0].size() - 1 && grid[x][y + 1] != 0 && !path[x][y + 1])
             {
                 y++;
             }
             break;
         case 'Q':
+        case 'q':
             return;
         case 'G':
+        case 'g':
             cout << "You gave up. Your final position is (" << x << ", " << y << ").\n";
             return;
         default:
@@ -415,14 +526,17 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
         y_pos = y;
         path[x][y] = true;
 
-        if (moves >= path_length)
+        auto current_time = chrono::steady_clock::now();
+        game_duration = chrono::duration_cast<chrono::seconds>(current_time - start_time);
+
+        if ((moves >= path_length) || (x == grid.size() - 1 && y == grid[0].size() - 1))
         {
             if (x == grid.size() - 1 && y == grid[0].size() - 1)
             {
+                saverec(playername, game_duration, "player_history.csv");
                 cout << "YOU WON!\n";
                 int choice;
                 double subchoice;
-
                 // Ask if the player wants to play again
                 char playAgain;
                 cout << "Do you want to play again? (Y/N): ";
@@ -436,7 +550,6 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                     path = vector<vector<bool>>(grid.size(), vector<bool>(grid[0].size(), false));
                     path[0][0] = true;
 
-                    // Show the menu again
                     do
                     {
                         displayMenu();
@@ -459,7 +572,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                             Select_Choice(choice);
                             break;
                         case 4:
-                            cout << "History option selected. (To be implemented)\n";
+                            Select_Choice(choice);
                             break;
                         case 5:
                             cout << "Leaderboard option selected. (To be implemented)\n";
@@ -481,7 +594,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                     return;
                 }
             }
-            if (x == grid.size() - 1 && y == grid[0].size() - 1)
+            else
             {
                 cout << "YOU LOSE! Reached maximum allowed moves\n";
                 int choice;
@@ -500,7 +613,6 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                     path = vector<vector<bool>>(grid.size(), vector<bool>(grid[0].size(), false));
                     path[0][0] = true;
 
-                    // Show the menu again
                     do
                     {
                         displayMenu();
@@ -523,7 +635,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                             Select_Choice(choice);
                             break;
                         case 4:
-                            cout << "History option selected. (To be implemented)\n";
+                            Select_Choice(choice);
                             break;
                         case 5:
                             cout << "Leaderboard option selected. (To be implemented)\n";
@@ -546,7 +658,6 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 return;
             }
         }
-        display_grid(grid, path);
         clear_screen();
         display_grid(grid, path);
     }
@@ -591,11 +702,11 @@ void HardMood()
     int cell_width = to_string(largest_num).length() + 1;
 
     save_grid(grid, filename, cell_width, path_length);
-    cout << "Grid saved to " << filename << "\n";
+
     vector<vector<bool>> path(x, vector<bool>(y, false));
-    path[0][0] = true; // Mark the start position as part of the path
+    path[0][0] = true;
 
     display_grid(grid, path);
-    handle_commands(grid, path, x_pos, y_pos, path_length);
+    handle_commands(grid, path, x_pos, y_pos, path_length, playername);
     return;
 }
