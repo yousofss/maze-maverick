@@ -403,11 +403,11 @@ int main()
             return 1;
         }
     }
-    if (!fileExists)
-    {
-        ofstream playerFile("./Users/" + playername + ".csv", ios::app);
-        playerFile.close();
-    }
+    // if (!fileExists)
+    // {
+    //     ofstream playerFile("./Users/" + playername + ".csv", ios::app);
+    //     playerFile.close();
+    // }
 
     cout << "Hello, " + playername + " Welcome to Maze Maverick\n";
     displayMenu();
@@ -456,7 +456,7 @@ void saverec(const string &playerName, const chrono::seconds &game_duration, con
 
 void updateLeaderboard(const string &playername, const string &leaderboardFilename)
 {
-    ifstream playerFile("./Users/" + playername + ".csv");
+    ifstream playerFile("./Users/" + playername + ".csv", ios::app);
     ofstream leaderboardFile(leaderboardFilename, ios::app);
 
     if (playerFile.is_open() && leaderboardFile.is_open())
