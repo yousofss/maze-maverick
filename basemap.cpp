@@ -63,7 +63,7 @@ int getRandomInt(int a_l, int a_u, mt19937 &gen)
     return dis_a(gen);
 }
 
-string findfile(const string& path)
+string findfile(const string &path)
 {
     auto last_slash = max(path.find_last_of('/'), path.find_last_of('\\'));
 
@@ -74,6 +74,12 @@ string findfile(const string& path)
     replace(file_name.begin(), file_name.end(), '_', ' ');
 
     return file_name;
+}
+
+bool doesFileExist(const string &filePath)
+{
+    ifstream file(filePath);
+    return file.good();
 }
 
 void HardMood();
@@ -375,9 +381,9 @@ int main()
     getline(cin, playername);
 
     string playerFilePath = "./Users/" + playername + ".csv";
-    string fileName = findfile(playerFilePath);
+    bool fileExists = doesFileExist(playerFilePath);
     char answer;
-    while (!fileName.empty())
+    while (fileExists)
     {
         cout << "player with this name has founded , is this yourself?(y/n) " << endl;
         cin >> answer;
@@ -386,13 +392,20 @@ int main()
             cout << "make a newname : ";
             cin >> playername;
         }
-        else if (answer == 'y' || answer == 'Y'){
+        else if (answer == 'y' || answer == 'Y')
+        {
             break;
         }
-        else {
+        else
+        {
             cout << "Invalid choice. Please try again.\n";
             return 1;
         }
+    }
+    if (!fileExists)
+    {
+        ofstream playerFile("./Users/" + playername + ".csv", ios::app);
+        playerFile.close();
     }
 
     cout << "Hello, " + playername + " Welcome to Maze Maverick\n";
@@ -487,7 +500,7 @@ void updateLeaderboard(const string &playername, const string &leaderboardFilena
             totalBestTimes += pair.second;
         }
 
-        leaderboardFile << playername << "," << totalWins << "," << totalBestTimes  << "," << totalGames << "\n";
+        leaderboardFile << playername << "," << totalWins << "," << totalBestTimes << "," << totalGames << "\n";
 
         leaderboardFile.close();
     }
@@ -1014,11 +1027,11 @@ void displayLeaderboard(const string &filename) // it will not display
 
         for (size_t i = 0; i < playerRecords.size(); ++i)
         {
-            rec.add(to_string(i + 1));                    
-            rec.add(playerRecords[i].playerName);          
-            rec.add(playerRecords[i].mapname);            
-            rec.add(to_string(playerRecords[i].duration)); 
-            rec.add(playerRecords[i].win ? "1" : "0");     
+            rec.add(to_string(i + 1));
+            rec.add(playerRecords[i].playerName);
+            rec.add(playerRecords[i].mapname);
+            rec.add(to_string(playerRecords[i].duration));
+            rec.add(playerRecords[i].win ? "1" : "0");
             rec.endOfRow();
         }
 
