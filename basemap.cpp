@@ -44,6 +44,7 @@ struct PlayerRecord
     }
 };
 
+
 struct GameRecord
 {
     string playerName;
@@ -104,7 +105,7 @@ void displayPlayerInfo(const string &playerName);
 
 void displayLeaderboard(const string &filename); // leaderboard
 
-void displayrec(const string &filename) // display leaderboard
+void displayrec(const string &filename)
 {
     ifstream historyFile(filename);
     if (historyFile.is_open()) {
@@ -112,15 +113,16 @@ void displayrec(const string &filename) // display leaderboard
         int count = 0;
         const int max_records = 10;
         string line;
+        
         while (getline(historyFile, line) && count < max_records) {
             istringstream iss(line);
             string playerName, mapname, date, resultString;
             int duration;
             bool win;
-            if (getline(iss, playerName, ',') && 
-                (iss >> duration) && iss.ignore() && 
-                getline(iss, date, ',') && 
-                getline(iss, mapname, ',') && 
+            if (getline(iss, playerName, ',') &&
+                (iss >> duration) && iss.ignore() &&
+                getline(iss, date, ',') &&
+                getline(iss, mapname, ',') &&
                 getline(iss, resultString, ',')) {
                 win = (resultString == "win");
                 playerRecords.push_back({playerName, mapname, duration, win, date});
@@ -128,7 +130,7 @@ void displayrec(const string &filename) // display leaderboard
             }
         }
 
-        sort(playerRecords.begin(), playerRecords.end());
+        reverse(playerRecords.begin(), playerRecords.end());
 
         TextTable rec;
         rec.setAlignment(0, TextTable::Alignment::LEFT);
@@ -153,7 +155,7 @@ void displayrec(const string &filename) // display leaderboard
             rec.endOfRow();
         }
 
-        cout << "Records Table:\n" << rec << endl;
+        cout << "Records Table (Reversed):\n" << rec << endl;
 
         historyFile.close();
     }
@@ -162,6 +164,7 @@ void displayrec(const string &filename) // display leaderboard
         cout << "Unable to open " << filename << " for reading player history.\n";
     }
 }
+
 
 void displayMenu()
 {
