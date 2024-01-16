@@ -107,21 +107,24 @@ void displayLeaderboard(const string &filename); // leaderboard
 void displayrec(const string &filename) // display leaderboard
 {
     ifstream historyFile(filename);
-    if (historyFile.is_open())
-    {
+    if (historyFile.is_open()) {
         vector<PlayerRecord> playerRecords;
-
+        int count = 0;
+        const int max_records = 10;
         string line;
-        while (getline(historyFile, line))
-        {
+        while (getline(historyFile, line) && count < max_records) {
             istringstream iss(line);
-            string playerName, mapname, date;
+            string playerName, mapname, date, resultString;
             int duration;
             bool win;
-
-            if (getline(iss, playerName, ',') && getline(iss, mapname, ',') && (iss >> duration) && (iss >> win) && getline(iss, date, ','))
-            {
+            if (getline(iss, playerName, ',') && 
+                (iss >> duration) && iss.ignore() && 
+                getline(iss, date, ',') && 
+                getline(iss, mapname, ',') && 
+                getline(iss, resultString, ',')) {
+                win = (resultString == "win");
                 playerRecords.push_back({playerName, mapname, duration, win, date});
+                count++;
             }
         }
 
@@ -141,18 +144,16 @@ void displayrec(const string &filename) // display leaderboard
         rec.add("Date");
         rec.endOfRow();
 
-        for (size_t i = 0; i < playerRecords.size(); ++i)
-        {
-            rec.add(playerRecords[i].date);
-            rec.add(playerRecords[i].playerName);
-            rec.add(playerRecords[i].mapname);
-            rec.add(to_string(playerRecords[i].duration));
-            rec.add(playerRecords[i].win ? "Win" : "Loss");
+        for (const auto& record : playerRecords) {
+            rec.add(record.playerName);
+            rec.add(record.mapname);
+            rec.add(to_string(record.duration));
+            rec.add(record.win ? "Win" : "Loss");
+            rec.add(record.date);
             rec.endOfRow();
         }
 
-        cout << "Records Table:\n"
-             << rec << endl;
+        cout << "Records Table:\n" << rec << endl;
 
         historyFile.close();
     }
