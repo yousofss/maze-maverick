@@ -53,6 +53,27 @@ struct GameRecord
     string date;
 };
 
+struct LeaderboardRecord
+{
+    string playerName;
+    int totalWins;
+    int totalBestTime;
+    int totalGames;
+
+    LeaderboardRecord(const string &name, int wins, int bestTime, int games)
+        : playerName(name), totalWins(wins), totalBestTime(bestTime), totalGames(games) {}
+
+    bool operator<(const LeaderboardRecord &other) const
+    {
+        // Sort by total wins first, then by lesser total best time for ties
+        if (totalWins != other.totalWins)
+        {
+            return totalWins > other.totalWins;
+        }
+        return totalBestTime < other.totalBestTime;
+    }
+};
+
 void clear_screen()
 {
     cout << "\x1B[2J\x1B[H"; // ANSI escape codes to clear the screen
@@ -527,7 +548,7 @@ void updateLeaderboard(const string &playername, const string &leaderboardFilena
             }
             leaderboardInFile.close();
 
-            // Update player leaderboard 
+            // Update player leaderboard
             leaderboardMap[playername] = make_tuple(totalWins, totalRecords, totalGames);
 
             // Write the updated leaderboard back to the file
@@ -1019,73 +1040,59 @@ void displayPlayerInfo(const string &playerName)
     }
 }
 
-void displayLeaderboard(const string &filename) // it will not display
+void displayLeaderboard(const string &filename)
 {
     ifstream leaderboardFile(filename);
     if (leaderboardFile.is_open())
     {
-        vector<PlayerRecord> playerRecords;
-
+        vector<LeaderboardRecord> playerRecords;
         string line;
         while (getline(leaderboardFile, line))
         {
             istringstream iss(line);
-            string playerName, mapName, result, date;
-            int duration;
+            string playerName;
+            int totalWins, totalBestTime, totalGames;
 
-            if (getline(iss, playerName, ',') && (iss >> duration) && (iss >> result) && (getline(iss, date)))
+            if (getline(iss, playerName, ',') &&
+                (iss >> totalWins) && iss.ignore() &&
+                (iss >> totalBestTime) && iss.ignore() &&
+                (iss >> totalGames))
             {
-                bool win = (result == "win");
-
-                // Check if the player already exists in the records
-                auto it = find_if(playerRecords.begin(), playerRecords.end(),
-                                  [&playerName](const PlayerRecord &pr)
-                                  {
-                                      return pr.playerName == playerName;
-                                  });
-
-                if (it != playerRecords.end())
-                {
-                    // Player already exists, update the record
-                    it->duration += duration;
-                    it->win = it->win || win; // Update win status
-                }
-                else
-                {
-                    // Player doesn't exist, add a new record
-                    playerRecords.push_back({playerName, "", duration, win, date});
-                }
+                playerRecords.push_back({playerName, totalWins, totalBestTime, totalGames});
             }
         }
 
+        // Sort the player records. (total win -> lesser total time)
         sort(playerRecords.begin(), playerRecords.end());
 
         TextTable rec;
-        rec.setAlignment(0, TextTable::Alignment::LEFT);
+        rec.setAlignment(0, TextTable::Alignment::RIGHT);
         rec.setAlignment(1, TextTable::Alignment::LEFT);
-        rec.setAlignment(2, TextTable::Alignment::LEFT);
+        rec.setAlignment(2, TextTable::Alignment::RIGHT);
         rec.setAlignment(3, TextTable::Alignment::RIGHT);
         rec.setAlignment(4, TextTable::Alignment::RIGHT);
 
+        // Add header row to the table
         rec.add("Rank");
         rec.add("Player");
-        rec.add("Map");
-        rec.add("Total Time (seconds)");
         rec.add("Total Wins");
+        rec.add("Total Best Time (seconds)");
+        rec.add("Total Games");
         rec.endOfRow();
 
+        // Add player records to the table
         for (size_t i = 0; i < playerRecords.size(); ++i)
         {
             rec.add(to_string(i + 1));
             rec.add(playerRecords[i].playerName);
-            rec.add(playerRecords[i].mapname);
-            rec.add(to_string(playerRecords[i].duration));
-            rec.add(playerRecords[i].win ? "1" : "0");
+            rec.add(to_string(playerRecords[i].totalWins));
+            rec.add(to_string(playerRecords[i].totalBestTime));
+            rec.add(to_string(playerRecords[i].totalGames));
             rec.endOfRow();
         }
 
-        cout << "Leaderboard Table:\n"
-             << rec << endl;
+        // Display the leaderboard table
+        cout << "Leaderboard Table:\n" << rec << endl;
 
         leaderboardFile.close();
     }
