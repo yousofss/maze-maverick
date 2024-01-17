@@ -44,7 +44,6 @@ struct PlayerRecord
     }
 };
 
-
 struct GameRecord
 {
     string playerName;
@@ -108,13 +107,15 @@ void displayLeaderboard(const string &filename); // leaderboard
 void displayrec(const string &filename)
 {
     ifstream historyFile(filename);
-    if (historyFile.is_open()) {
+    if (historyFile.is_open())
+    {
         vector<PlayerRecord> playerRecords;
         int count = 0;
         const int max_records = 10;
         string line;
-        
-        while (getline(historyFile, line) && count < max_records) {
+
+        while (getline(historyFile, line) && count < max_records)
+        {
             istringstream iss(line);
             string playerName, mapname, date, resultString;
             int duration;
@@ -123,7 +124,8 @@ void displayrec(const string &filename)
                 (iss >> duration) && iss.ignore() &&
                 getline(iss, date, ',') &&
                 getline(iss, mapname, ',') &&
-                getline(iss, resultString, ',')) {
+                getline(iss, resultString, ','))
+            {
                 win = (resultString == "win");
                 playerRecords.push_back({playerName, mapname, duration, win, date});
                 count++;
@@ -146,7 +148,8 @@ void displayrec(const string &filename)
         rec.add("Date");
         rec.endOfRow();
 
-        for (const auto& record : playerRecords) {
+        for (const auto &record : playerRecords)
+        {
             rec.add(record.playerName);
             rec.add(record.mapname);
             rec.add(to_string(record.duration));
@@ -155,7 +158,8 @@ void displayrec(const string &filename)
             rec.endOfRow();
         }
 
-        cout << "Records Table (Reversed):\n" << rec << endl;
+        cout << "Records Table (Reversed):\n"
+             << rec << endl;
 
         historyFile.close();
     }
@@ -164,7 +168,6 @@ void displayrec(const string &filename)
         cout << "Unable to open " << filename << " for reading player history.\n";
     }
 }
-
 
 void displayMenu()
 {
@@ -406,11 +409,11 @@ int main()
             return 1;
         }
     }
-    // if (!fileExists)
-    // {
-    //     ofstream playerFile("./Users/" + playername + ".csv", ios::app);
-    //     playerFile.close();
-    // }
+    if (!fileExists)
+    {
+        ofstream playerFile("./Users/" + playername + ".csv", ios::app);
+        playerFile.close();
+    }
 
     cout << "Hello, " + playername + " Welcome to Maze Maverick\n";
     displayMenu();
@@ -459,7 +462,7 @@ void saverec(const string &playerName, const chrono::seconds &game_duration, con
 
 void updateLeaderboard(const string &playername, const string &leaderboardFilename)
 {
-    ifstream playerFile("./Users/" + playername + ".csv", ios::app);
+    ifstream playerFile("./Users/" + playername + ".csv");
     ofstream leaderboardFile(leaderboardFilename, ios::app);
 
     if (playerFile.is_open() && leaderboardFile.is_open())
@@ -498,15 +501,57 @@ void updateLeaderboard(const string &playername, const string &leaderboardFilena
         playerFile.close();
 
         // Calculate total best times by summing the best times for each map
-        int totalBestTimes = 0;
+        int totalRecords = 0;
         for (const auto &pair : bestTimes)
         {
-            totalBestTimes += pair.second;
+            totalRecords += pair.second;
         }
 
-        leaderboardFile << playername << "," << totalWins << "," << totalBestTimes << "," << totalGames << "\n";
+        // Read the leaderboard file
+        map<string, tuple<int, int, int>> leaderboardMap;
+        ifstream leaderboardInFile(leaderboardFilename);
+        if (leaderboardInFile.is_open())
+        {
+            while (getline(leaderboardInFile, line))
+            {
+                istringstream iss(line);
+                string name;
+                int wins, bestTime, games;
+                if (getline(iss, name, ',') &&
+                    (iss >> wins) && iss.ignore() &&
+                    (iss >> bestTime) && iss.ignore() &&
+                    (iss >> games))
+                {
+                    leaderboardMap[name] = make_tuple(wins, bestTime, games);
+                }
+            }
+            leaderboardInFile.close();
 
-        leaderboardFile.close();
+            // Update player leaderboard 
+            leaderboardMap[playername] = make_tuple(totalWins, totalRecords, totalGames);
+
+            // Write the updated leaderboard back to the file
+            ofstream leaderboardOutFile(leaderboardFilename);
+            if (leaderboardOutFile.is_open())
+            {
+                for (const auto &entry : leaderboardMap)
+                {
+                    leaderboardOutFile << entry.first << ","
+                                       << get<0>(entry.second) << ","
+                                       << get<1>(entry.second) << ","
+                                       << get<2>(entry.second) << "\n";
+                }
+                leaderboardOutFile.close();
+            }
+            else
+            {
+                cout << "Error: Unable to open leaderboard file for writing.\n";
+            }
+        }
+        else
+        {
+            cout << "Error: Unable to open leaderboard file for reading.\n";
+        }
     }
     else
     {
@@ -794,7 +839,6 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             if ((x == grid.size() - 1 && y == grid[0].size() - 1) && ((moves == path_length) && (playsum == grid[x][y])))
             {
                 win = true;
-                updateLeaderboard(playername, "Leaderboard.csv");
                 saverec(playername, game_duration, "player_history.csv", mapname, win);
                 ofstream playerFile("./Users/" + playername + ".csv", ios::app);
                 if (playerFile.is_open())
@@ -806,6 +850,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 {
                     cout << "Unable to open player's record file.\n";
                 }
+                updateLeaderboard(playername, "Leaderboard.csv");
                 cout << "YOU WON!\n";
                 int choice;
                 double subchoice;
@@ -827,7 +872,6 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             else
             {
                 win = false;
-                updateLeaderboard(playername, "Leaderboard.csv");
                 saverec(playername, game_duration, "player_history.csv", mapname, win);
                 ofstream playerFile("./Users/" + playername + ".csv", ios::app);
                 if (playerFile.is_open())
@@ -839,6 +883,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 {
                     cout << "Unable to open player's record file.\n";
                 }
+                updateLeaderboard(playername, "Leaderboard.csv");
                 if ((x == grid.size() - 1 && y == grid[0].size() - 1) && ((moves == path_length) && (playsum != grid[x][y])))
                 {
 
