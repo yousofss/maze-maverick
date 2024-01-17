@@ -326,27 +326,62 @@ void do_Choice(double &subchoice)
     else if (subchoice == 2.2)
     {
         cout << "Enter the path to the grid file: " << endl;
-        string gridPath;
+        string gridPath, mapname;
         cin >> gridPath;
-        string mapname = findfile(gridPath);
-
+        cout << "Enter the map name: " << endl;
+        cin >> mapname;
+        
         ifstream file(gridPath);
         if (file.is_open())
         {
+            string line;
+            int pathLength;
+
+            // Read the first line for path length
+            if (getline(file, line))
+            {
+                istringstream iss(line);
+                string pathLengthLabel;
+                if (!(iss >> pathLengthLabel >> pathLength) || pathLengthLabel != "PathLength:")
+                {
+                    cout << "Error: First line does not contain valid 'PathLength' format.\n";
+                    return;
+                }
+            }
+            else
+            {
+                cout << "Error: Unable to read the first line for 'PathLength'.\n";
+                return;
+            }
 
             vector<vector<int>> grid;
 
-            int cell_value;
-            while (file >> cell_value)
+            // Read the grid from the file line by line
+            while (getline(file, line))
             {
-                grid.push_back({cell_value});
+                istringstream iss(line);
+                vector<int> row;
+                int cell_value;
+                while (iss >> cell_value)
+                {
+                    row.push_back(cell_value);
+                }
+                if (!row.empty())
+                {
+                    grid.push_back(row);
+                }
+            }
+            if (grid.empty())
+            {
+                cout << "Error: Grid is empty or improperly formatted.\n";
+                return;
             }
             int x_pos = 0;
             int y_pos = 0;
             vector<vector<bool>> path(grid.size(), vector<bool>(grid[0].size(), false));
             path[0][0] = true;
             display_grid(grid, path);
-            handle_commands(grid, path, x_pos, y_pos, path_length, playername, mapname);
+            handle_commands(grid, path, x_pos, y_pos, pathLength, playername, mapname);
         }
         else
         {
@@ -1092,7 +1127,8 @@ void displayLeaderboard(const string &filename)
         }
 
         // Display the leaderboard table
-        cout << "Leaderboard Table:\n" << rec << endl;
+        cout << "Leaderboard Table:\n"
+             << rec << endl;
 
         leaderboardFile.close();
     }
