@@ -104,7 +104,9 @@ bool doesFileExist(const string &filePath)
     return file.good();
 }
 
-void HardMood();
+void easyMode();
+
+void hardMode();
 
 void saverec(const string &playerName, const chrono::seconds &game_duration, const string &filename, const string &mapname, bool win);
 
@@ -300,9 +302,13 @@ void Select_Choice(int choice)
 
 void do_Choice(double &subchoice)
 {
-    if (subchoice == 1.2)
+    if (subchoice == 1.1)
     {
-        HardMood();
+        easyMode();
+    }
+    else if (subchoice == 1.2)
+    {
+        hardMode();
     }
     else if (subchoice == 2.1)
     {
@@ -332,7 +338,7 @@ void do_Choice(double &subchoice)
             }
 
             path_length = read_path_length;
-            cout << path_length;
+            cout << "Path length: " << path_length << endl;
 
             vector<vector<int>> grid;
 
@@ -1139,7 +1145,42 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
     }
 }
 
-void HardMood()
+void easyMode()
+{
+    int x, y, a_l = -3, a_u = 3, b_l = 2, b_u = 5, path_length;
+    int min_plen, max_plen;
+    cout << "Enter the number of rows: ";
+    cin >> x;
+    cout << "Enter the number of columns: ";
+    cin >> y;
+    path_length = x + y - 2;
+    cout << "Path length: " << path_length << endl;
+    vector<vector<int>> grid = create_grid(x, y, a_l, a_u, b_l, b_u, path_length, gen);
+    string mapname;
+    cout << "Say your grid name : ";
+    cin >> mapname;
+    int x_pos = 0;
+    int y_pos = 0;
+    int largest_num = 0;
+    for (const auto &row : grid)
+    {
+        for (const auto &val : row)
+        {
+            largest_num = max(largest_num, val);
+        }
+    }
+    int cell_width = to_string(largest_num).length() + 1;
+
+    save_grid(grid, mapname, cell_width, path_length);
+
+    vector<vector<bool>> path(x, vector<bool>(y, false));
+    path[0][0] = true;
+    Resetgame(x, y, grid, path);
+
+    return;
+}
+
+void hardMode()
 {
     int x, y, a_l, a_u, b_l, b_u, path_length;
     int min_plen, max_plen;
