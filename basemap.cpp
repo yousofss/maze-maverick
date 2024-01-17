@@ -207,7 +207,7 @@ void displayrec(const string &filename, int start, int count) // it's better but
 
 void displayMenu()
 {
-    cout << "----- Maze Maverick Menu -----" << endl;
+    cout << "----- Menu -----" << endl;
     cout << "1. Create a New Map" << endl;
     cout << "2. Playground" << endl;
     cout << "3. Solve a Maze" << endl;
@@ -226,7 +226,7 @@ void Select_Choice(int choice)
     {
         cout << "1.1 Easy" << endl;
         cout << "1.2 Hard" << endl;
-        cout << "Enter your choice: ";
+        cout << "Enter your choice: (0 to return to the main menu) ";
     }
     else if (choice == 2)
     {
@@ -237,13 +237,13 @@ void Select_Choice(int choice)
         }
         cout << "2.1 Choose from Existing Maps" << endl;
         cout << "2.2 Import a Custom Map" << endl;
-        cout << "Enter your choice: ";
+        cout << "Enter your choice: (0 to return to the main menu) ";
     }
     else if (choice == 3)
     {
         cout << "3.1 Choose from Existing Maps" << endl;
         cout << "3.2 Import a Custom Map" << endl;
-        cout << "Enter your choice: ";
+        cout << "Enter your choice: (0 to return to the main menu) ";
     }
     else if (choice == 4)
     {
@@ -266,6 +266,7 @@ void Select_Choice(int choice)
         {
             // If no, reset the startIndex for the next time the user chooses to view records
             startIndex = 0;
+            clear_screen();
             displayMenu();
             cin >> choice;
             Select_Choice(choice);
@@ -289,6 +290,7 @@ void Select_Choice(int choice)
     }
     else if (choice == 7)
     {
+        clear_screen();
         exit(1);
     }
     else
@@ -304,16 +306,20 @@ void do_Choice(double &subchoice)
 {
     if (subchoice == 1.1)
     {
+        clear_screen();
         easyMode();
     }
     else if (subchoice == 1.2)
     {
+        clear_screen();
         hardMode();
     }
     else if (subchoice == 2.1)
     {
+        clear_screen();
+        label21:
         displayMaps();
-        cout << "Enter the name of the map you want to play with: ";
+        cout << "Please provide the name of the map you'd like to play with: ";
         string mapname;
         cin >> mapname;
 
@@ -366,10 +372,12 @@ void do_Choice(double &subchoice)
         else
         {
             cout << "Error: Unable to open the selected map.\n";
+            goto label21;
         }
     }
     else if (subchoice == 2.2)
     {
+        clear_screen();
         string gridPath, mapname;
         cout << "Enter the path to the grid file: " << endl;
         cin >> gridPath;
@@ -434,7 +442,7 @@ void do_Choice(double &subchoice)
     else if (subchoice == 3.1)
     {
         displayMaps();
-        cout << "Enter the name of the map you want solved.";
+        cout << "Enter the name of the map you want solved." << endl;
         string mapname;
         cin >> mapname;
 
@@ -478,7 +486,7 @@ void do_Choice(double &subchoice)
             int y_pos = 0;
             vector<vector<bool>> path(grid.size(), vector<bool>(grid[0].size(), false));
             path[0][0] = true;
-
+            clear_screen();
             solveMaze(grid, path_length);
             displayMenu();
             int choice;
@@ -564,6 +572,18 @@ void do_Choice(double &subchoice)
             cout << "Error: Unable to open the specified grid file.\n";
         }
     }
+    else if (subchoice == 0)
+    {
+        clear_screen();
+        displayMenu();
+        int choice;
+        cout << "Enter your choice: " << endl;
+        cin >> choice;
+        Select_Choice(choice);
+        double subchoice;
+        cin >> subchoice;
+        do_Choice(subchoice);
+    }
 }
 
 void Resetgame(int &x, int &y, vector<vector<int>> &grid, vector<vector<bool>> &path)
@@ -624,7 +644,7 @@ int main()
     char answer;
     while (fileExists)
     {
-        cout << "player with this name has founded , is this yourself?(y/n) " << endl;
+        cout << "Is " << playername << " you? Reply 'Yes' (Y) or 'No' (N)." << endl;
         cin >> answer;
         if (answer == 'n' || answer == 'N')
         {
@@ -641,8 +661,8 @@ int main()
             return 1;
         }
     }
-
-    cout << "Hello, " + playername + " Welcome to Maze Maverick\n";
+    clear_screen();
+    cout << "Hello, " + playername + "! Welcome to Maze Maverick\n";
     displayMenu();
     int choice;
     cout << "Enter your choice: " << endl;
@@ -897,6 +917,7 @@ void save_grid(const vector<vector<int>> &grid, const string &filename, int cell
         }
 
         file.close();
+        clear_screen();
         cout << "Grid saved to " << full_filepath << endl;
     }
     else
@@ -977,7 +998,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             }
             else
             {
-                cout << "GOOD GAME!\n";
+                cout << "gg\n";
             }
             return;
         }
@@ -1045,7 +1066,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             }
             else
             {
-                cout << "GOOD GAME!\n";
+                cout << "gg\n";
                 return;
             }
         default:
@@ -1088,11 +1109,12 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
 
                 if (playAgain == 'Y' || playAgain == 'y')
                 {
+                    clear_screen();
                     Resetgame(x_pos, y_pos, grid, path);
                 }
                 else
                 {
-                    cout << "GOOD GAME!\n";
+                    cout << "gg\n";
                     return;
                 }
             }
@@ -1135,7 +1157,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 }
                 else
                 {
-                    cout << "GOOD GAME!\n";
+                    cout << "gg\n";
                     return;
                 }
             }
@@ -1197,9 +1219,9 @@ void hardMode()
         cout << "Invalid path length. Please enter a value between " << min_plen << " and " << max_plen << ": ";
         cin >> path_length;
     }
-    cout << "Enter the lower and upper bounds for the path period [a_l, a_u]: ";
+    cout << "Please enter the path period's lower (a_l) and upper (a_u) bounds: ";
     cin >> a_l >> a_u;
-    cout << "Enter the lower and upper bounds for the rest of the grid [b_l, b_u]: ";
+    cout << "Please enter the lower (b_l) and upper (b_u) bounds for the rest of the grid: ";
     cin >> b_l >> b_u;
     vector<vector<int>>
         grid = create_grid(x, y, a_l, a_u, b_l, b_u, path_length, gen);
@@ -1268,11 +1290,25 @@ void displayPlayerInfo(const string &playerName)
 
         playerFile.close();
 
-        cout << "Player: " << playerName << "\n";
-        cout << "Total Games played: " << totalGames << "\n";
-        cout << "Total Wins: " << totalWins << "\n";
-        cout << "Last Win Record: " << lastWinRec << "\n";
-        cout << "Last Game Date: " << lastGameDate << "\n"; // Display the date of the last game
+        TextTable t('-', '|', '+');
+
+        // Add headers
+        t.add("Player");
+        t.add("Total Games Played");
+        t.add("Total Wins");
+        t.add("Last Win Record");
+        t.add("Last Game Date");
+        t.endOfRow();
+
+        // Add player data
+        t.add(playerName);
+        t.add(to_string(totalGames));
+        t.add(to_string(totalWins));
+        t.add(lastWinRec);
+        t.add(lastGameDate);
+        t.endOfRow();
+        clear_screen();
+        cout << t;
     }
     else
     {
@@ -1332,8 +1368,8 @@ void displayLeaderboard(const string &filename)
         }
 
         // Display the leaderboard table
-        cout << "Leaderboard Table:\n"
-             << rec << endl;
+        clear_screen();
+        cout << rec << endl;
 
         leaderboardFile.close();
     }
