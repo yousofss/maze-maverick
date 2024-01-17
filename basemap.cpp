@@ -126,6 +126,12 @@ void displayPlayerInfo(const string &playerName);
 
 void displayLeaderboard(const string &filename); // leaderboard
 
+bool isValidMove(int x, int y, const vector<vector<int>> &maze, const vector<vector<bool>> &visited);
+
+bool dfs(vector<vector<int>> &maze, vector<vector<bool>> &visited, int x, int y, int sum, int target, int maxPathLength, int pathLength);
+
+void solveMaze(vector<vector<int>> &maze, int maxPathLength);
+
 void displayrec(const string &filename, int start, int count) // it's better but it should be fix for remain lees than 10 rows it shouldn't asl for showing another page
 {
     ifstream historyFile(filename);
@@ -413,6 +419,139 @@ void do_Choice(double &subchoice)
             path[0][0] = true;
             display_grid(grid, path);
             handle_commands(grid, path, x_pos, y_pos, pathLength, playername, mapname);
+        }
+        else
+        {
+            cout << "Error: Unable to open the specified grid file.\n";
+        }
+    }
+    else if (subchoice == 3.1)
+    {
+        displayMaps();
+        cout << "Enter the name of the map you want solved.";
+        string mapname;
+        cin >> mapname;
+
+        ifstream file("./Maps/" + mapname); // all maps are in the "./Maps/" directory
+        if (file.is_open())
+        {
+            string line;
+            int read_path_length = -1;
+            while (getline(file, line))
+            {
+                if (line.find("PathLength: ") == 0)
+                {
+                    read_path_length = stoi(line.substr(12));
+                    break;
+                }
+            }
+
+            if (read_path_length == -1)
+            {
+                cout << "Error: PathLength information not found in the map file.\n";
+                return;
+            }
+
+            path_length = read_path_length;
+            vector<vector<int>> grid;
+
+            while (getline(file, line))
+            {
+
+                vector<int> row;
+                istringstream iss(line);
+                int cell_value;
+                while (iss >> cell_value)
+                {
+                    row.push_back(cell_value);
+                }
+                grid.push_back(row);
+            }
+
+            int x_pos = 0;
+            int y_pos = 0;
+            vector<vector<bool>> path(grid.size(), vector<bool>(grid[0].size(), false));
+            path[0][0] = true;
+
+            solveMaze(grid, path_length);
+            displayMenu();
+            int choice;
+            cout << "Enter your choice: " << endl;
+            cin >> choice;
+            Select_Choice(choice);
+            double subchoice;
+            cin >> subchoice;
+            do_Choice(subchoice);
+        }
+        else
+        {
+            cout << "Error: Unable to open the selected map.\n";
+        }
+    }
+    else if (subchoice == 3.2)
+    {
+        string gridPath, mapname;
+        cout << "Enter the path to the grid file: " << endl;
+        cin >> gridPath;
+        cout << "Enter the map name: " << endl;
+        cin >> mapname;
+
+        ifstream file(gridPath);
+        if (file.is_open())
+        {
+            string line;
+            int pathLength;
+
+            // Read the first line for path length
+            if (getline(file, line))
+            {
+                istringstream iss(line);
+                string pathLengthLabel;
+                if (!(iss >> pathLengthLabel >> pathLength) || pathLengthLabel != "PathLength:")
+                {
+                    cout << "Error: First line does not contain valid 'PathLength' format.\n";
+                    return;
+                }
+            }
+            else
+            {
+                cout << "Error: Unable to read the first line for 'PathLength'.\n";
+                return;
+            }
+            vector<vector<int>> grid;
+
+            while (getline(file, line))
+            {
+                istringstream iss(line);
+                vector<int> row;
+                int cell_value;
+                while (iss >> cell_value)
+                {
+                    row.push_back(cell_value);
+                }
+                if (!row.empty())
+                {
+                    grid.push_back(row);
+                }
+            }
+            if (grid.empty())
+            {
+                cout << "Error: Grid is empty or improperly formatted.\n";
+                return;
+            }
+            int x_pos = 0;
+            int y_pos = 0;
+            vector<vector<bool>> path(grid.size(), vector<bool>(grid[0].size(), false));
+            path[0][0] = true;
+            solveMaze(grid, pathLength);
+            displayMenu();
+            int choice;
+            cout << "Enter your choice: " << endl;
+            cin >> choice;
+            Select_Choice(choice);
+            double subchoice;
+            cin >> subchoice;
+            do_Choice(subchoice);
         }
         else
         {
@@ -1160,5 +1299,83 @@ void displayLeaderboard(const string &filename)
     else
     {
         cout << "Unable to open " << filename << " for reading leaderboard.\n";
+    }
+}
+
+//  function to check if a move is valid or not
+bool isValidMove(int x, int y, const vector<vector<int>> &maze, const vector<vector<bool>> &visited)
+{
+    return x >= 0 && x < maze.size() && y >= 0 && y < maze[0].size() && maze[x][y] != 0 && !visited[x][y];
+}
+
+// DFS function to find the path
+bool dfs(vector<vector<int>> &maze, vector<vector<bool>> &visited, int x, int y, int sum, int target, int maxPathLength, int pathLength)
+{
+    if (x == maze.size() - 1 && y == maze[0].size() - 1)
+    {
+        return sum == target;
+    }
+
+    // Mark the current cell as visited
+    visited[x][y] = true;
+
+    // Path length exceeded the limit
+    if (pathLength > maxPathLength)
+    {
+        visited[x][y] = false;
+        return false;
+    }
+
+    // Directions: right, down, left, up
+    vector<pair<int, int>> directions = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+    for (const auto &dir : directions)
+    {
+        int newX = x + dir.first;
+        int newY = y + dir.second;
+        if (isValidMove(newX, newY, maze, visited))
+        {
+            if (dfs(maze, visited, newX, newY, sum + maze[x][y], target, maxPathLength, pathLength + 1))
+            {
+                return true;
+            }
+        }
+    }
+
+    // If path is not found, backtrack
+    visited[x][y] = false;
+    return false;
+}
+
+void solveMaze(vector<vector<int>> &maze, int maxPathLength)
+{
+    // End point
+    int targetSum = maze.back().back();
+
+    // Create a visited 2D vector initialized to false
+    vector<vector<bool>> visited(maze.size(), vector<bool>(maze[0].size(), false));
+
+    if (dfs(maze, visited, 0, 0, 0, targetSum, maxPathLength, 0))
+    {
+        // Print the maze with the correct path
+        for (int i = 0; i < maze.size(); i++)
+        {
+            for (int j = 0; j < maze[i].size(); j++)
+            {
+                if (visited[i][j])
+                {
+                    // Red color for path
+                    cout << "\x1B[31m" << maze[i][j] << "\x1B[0m ";
+                }
+                else
+                {
+                    cout << maze[i][j] << " ";
+                }
+            }
+            cout << endl;
+        }
+    }
+    else
+    {
+        cout << "No path found that meets the conditions." << endl;
     }
 }
