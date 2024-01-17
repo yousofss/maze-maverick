@@ -25,6 +25,7 @@ const int START_COLOR = 32;
 const int END_COLOR = 34;
 const int PATH_COLOR = 33;
 int path_length, path_sum;
+int startIndex = 0;
 string playername;
 
 struct PlayerRecord
@@ -57,11 +58,11 @@ struct LeaderboardRecord
 {
     string playerName;
     int totalWins;
-    int totalBestTime;
+    int totalBestRec;
     int totalGames;
 
     LeaderboardRecord(const string &name, int wins, int bestTime, int games)
-        : playerName(name), totalWins(wins), totalBestTime(bestTime), totalGames(games) {}
+        : playerName(name), totalWins(wins), totalBestRec(bestTime), totalGames(games) {}
 
     bool operator<(const LeaderboardRecord &other) const
     {
@@ -70,7 +71,7 @@ struct LeaderboardRecord
         {
             return totalWins > other.totalWins;
         }
-        return totalBestTime < other.totalBestTime;
+        return totalBestRec < other.totalBestRec;
     }
 };
 
@@ -125,17 +126,23 @@ void displayPlayerInfo(const string &playerName);
 
 void displayLeaderboard(const string &filename); // leaderboard
 
-void displayrec(const string &filename)
+void displayrec(const string &filename, int start, int count) // it's better but it should be fix for remain lees than 10 rows it shouldn't asl for showing another page
 {
     ifstream historyFile(filename);
     if (historyFile.is_open())
     {
         vector<PlayerRecord> playerRecords;
-        int count = 0;
-        const int max_records = 10;
+        int recordCount = 0;
         string line;
 
-        while (getline(historyFile, line) && count < max_records)
+        // Skip records until reaching the starting index
+        while (getline(historyFile, line) && recordCount < start)
+        {
+            recordCount++;
+        }
+
+        // Read and display the next 'count' records
+        while (getline(historyFile, line) && recordCount < start + count)
         {
             istringstream iss(line);
             string playerName, mapname, date, resultString;
@@ -149,7 +156,7 @@ void displayrec(const string &filename)
             {
                 win = (resultString == "win");
                 playerRecords.push_back({playerName, mapname, duration, win, date});
-                count++;
+                recordCount++;
             }
         }
 
@@ -179,7 +186,7 @@ void displayrec(const string &filename)
             rec.endOfRow();
         }
 
-        cout << "Records Table (Reversed):\n"
+        cout << "Records Table :\n"
              << rec << endl;
 
         historyFile.close();
@@ -205,6 +212,8 @@ void displayMenu()
 
 void Select_Choice(int choice)
 {
+    string playerFilePath = "./Users/" + playername + ".csv";
+    bool fileExists = doesFileExist(playerFilePath);
     if (choice == 1)
     {
         cout << "1.1 Easy" << endl;
@@ -213,6 +222,11 @@ void Select_Choice(int choice)
     }
     else if (choice == 2)
     {
+        if (!fileExists)
+        {
+            ofstream playerFile("./Users/" + playername + ".csv", ios::app);
+            playerFile.close();
+        }
         cout << "2.1 Choose from Existing Maps" << endl;
         cout << "2.2 Import a Custom Map" << endl;
         cout << "Enter your choice: ";
@@ -225,10 +239,29 @@ void Select_Choice(int choice)
     }
     else if (choice == 4)
     {
-        displayrec("player_history.csv");
-        displayMenu();
-        cin >> choice;
-        Select_Choice(choice);
+        const int recordsPerPage = 10;
+
+        displayrec("play_history.csv", startIndex, recordsPerPage);
+
+        startIndex += recordsPerPage;
+
+        char viewMore;
+        cout << "Do you want to see more records? (y/n): ";
+        cin >> viewMore;
+
+        if (viewMore == 'y' || viewMore == 'Y')
+        {
+            // If yes, recursively call Select_Choice with the same choice
+            Select_Choice(choice);
+        }
+        else
+        {
+            // If no, reset the startIndex for the next time the user chooses to view records
+            startIndex = 0;
+            displayMenu();
+            cin >> choice;
+            Select_Choice(choice);
+        }
     }
     else if (choice == 5)
     {
@@ -325,12 +358,12 @@ void do_Choice(double &subchoice)
     }
     else if (subchoice == 2.2)
     {
-        cout << "Enter the path to the grid file: " << endl;
         string gridPath, mapname;
+        cout << "Enter the path to the grid file: " << endl;
         cin >> gridPath;
         cout << "Enter the map name: " << endl;
         cin >> mapname;
-        
+
         ifstream file(gridPath);
         if (file.is_open())
         {
@@ -353,10 +386,8 @@ void do_Choice(double &subchoice)
                 cout << "Error: Unable to read the first line for 'PathLength'.\n";
                 return;
             }
-
             vector<vector<int>> grid;
 
-            // Read the grid from the file line by line
             while (getline(file, line))
             {
                 istringstream iss(line);
@@ -464,11 +495,6 @@ int main()
             cout << "Invalid choice. Please try again.\n";
             return 1;
         }
-    }
-    if (!fileExists)
-    {
-        ofstream playerFile("./Users/" + playername + ".csv", ios::app);
-        playerFile.close();
     }
 
     cout << "Hello, " + playername + " Welcome to Maze Maverick\n";
@@ -799,7 +825,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             double subchoice;
             char playAgain;
             cin >> playAgain;
-            saverec(playername, game_duration, "player_history.csv", mapname, win);
+            saverec(playername, game_duration, "play_history.csv", mapname, win);
             if (playAgain == 'Y' || playAgain == 'y')
             {
                 Resetgame(x_pos, y_pos, grid, path);
@@ -895,7 +921,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             if ((x == grid.size() - 1 && y == grid[0].size() - 1) && ((moves == path_length) && (playsum == grid[x][y])))
             {
                 win = true;
-                saverec(playername, game_duration, "player_history.csv", mapname, win);
+                saverec(playername, game_duration, "play_history.csv", mapname, win);
                 ofstream playerFile("./Users/" + playername + ".csv", ios::app);
                 if (playerFile.is_open())
                 {
@@ -928,7 +954,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             else
             {
                 win = false;
-                saverec(playername, game_duration, "player_history.csv", mapname, win);
+                saverec(playername, game_duration, "play_history.csv", mapname, win);
                 ofstream playerFile("./Users/" + playername + ".csv", ios::app);
                 if (playerFile.is_open())
                 {
@@ -1016,9 +1042,8 @@ void HardMood()
 
     vector<vector<bool>> path(x, vector<bool>(y, false));
     path[0][0] = true;
+    Resetgame(x, y, grid, path);
 
-    display_grid(grid, path);
-    handle_commands(grid, path, x_pos, y_pos, path_length, playername, mapname);
     return;
 }
 
@@ -1029,7 +1054,7 @@ void displayPlayerInfo(const string &playerName)
     {
         int totalGames = 0;
         int totalWins = 0;
-        string lastWinTime = "";
+        string lastWinRec = "";
         int totalTime = 0;
         string lastGameDate = ""; // Added to store the date of the last game
 
@@ -1049,9 +1074,9 @@ void displayPlayerInfo(const string &playerName)
                     // Extracting the date and time from duration (assuming it's in seconds)
                     int durationSeconds = stoi(duration);
                     totalTime += durationSeconds;
-                    lastWinTime = to_string(durationSeconds / 3600) + "h " +
-                                  to_string((durationSeconds % 3600) / 60) + "m " +
-                                  to_string(durationSeconds % 60) + "s";
+                    lastWinRec = to_string(durationSeconds / 3600) + "h " +
+                                 to_string((durationSeconds % 3600) / 60) + "m " +
+                                 to_string(durationSeconds % 60) + "s";
                 }
                 else if (gameResult == "loss")
                 {
@@ -1066,7 +1091,7 @@ void displayPlayerInfo(const string &playerName)
         cout << "Player: " << playerName << "\n";
         cout << "Total Games played: " << totalGames << "\n";
         cout << "Total Wins: " << totalWins << "\n";
-        cout << "Last Win Time: " << lastWinTime << "\n";
+        cout << "Last Win Record: " << lastWinRec << "\n";
         cout << "Last Game Date: " << lastGameDate << "\n"; // Display the date of the last game
     }
     else
@@ -1086,14 +1111,14 @@ void displayLeaderboard(const string &filename)
         {
             istringstream iss(line);
             string playerName;
-            int totalWins, totalBestTime, totalGames;
+            int totalWins, totalBestRec, totalGames;
 
             if (getline(iss, playerName, ',') &&
                 (iss >> totalWins) && iss.ignore() &&
-                (iss >> totalBestTime) && iss.ignore() &&
+                (iss >> totalBestRec) && iss.ignore() &&
                 (iss >> totalGames))
             {
-                playerRecords.push_back({playerName, totalWins, totalBestTime, totalGames});
+                playerRecords.push_back({playerName, totalWins, totalBestRec, totalGames});
             }
         }
 
@@ -1121,7 +1146,7 @@ void displayLeaderboard(const string &filename)
             rec.add(to_string(i + 1));
             rec.add(playerRecords[i].playerName);
             rec.add(to_string(playerRecords[i].totalWins));
-            rec.add(to_string(playerRecords[i].totalBestTime));
+            rec.add(to_string(playerRecords[i].totalBestRec));
             rec.add(to_string(playerRecords[i].totalGames));
             rec.endOfRow();
         }
