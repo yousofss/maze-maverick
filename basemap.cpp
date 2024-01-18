@@ -28,6 +28,14 @@ int path_length, path_sum;
 int startIndex = 0;
 string playername;
 
+struct Direction
+{
+    int dx, dy;
+    string symbol;
+
+    Direction(int x, int y, const string &s) : dx(x), dy(y), symbol(s) {}
+};
+
 struct PlayerRecord
 {
     string playerName;
@@ -218,17 +226,17 @@ void displayMenu()
     return;
 }
 
-void Select_Choice(int choice)
+void Select_Choice(string choice)
 {
     string playerFilePath = "./Users/" + playername + ".csv";
     bool fileExists = doesFileExist(playerFilePath);
-    if (choice == 1)
+    if (choice == "1")
     {
         cout << "1.1 Easy" << endl;
         cout << "1.2 Hard" << endl;
         cout << "Enter your choice: (0 to return to the main menu) ";
     }
-    else if (choice == 2)
+    else if (choice == "2")
     {
         if (!fileExists)
         {
@@ -239,13 +247,13 @@ void Select_Choice(int choice)
         cout << "2.2 Import a Custom Map" << endl;
         cout << "Enter your choice: (0 to return to the main menu) ";
     }
-    else if (choice == 3)
+    else if (choice == "3")
     {
         cout << "3.1 Choose from Existing Maps" << endl;
         cout << "3.2 Import a Custom Map" << endl;
         cout << "Enter your choice: (0 to return to the main menu) ";
     }
-    else if (choice == 4)
+    else if (choice == "4")
     {
         const int recordsPerPage = 10;
 
@@ -266,13 +274,12 @@ void Select_Choice(int choice)
         {
             // If no, reset the startIndex for the next time the user chooses to view records
             startIndex = 0;
-            clear_screen();
             displayMenu();
             cin >> choice;
             Select_Choice(choice);
         }
     }
-    else if (choice == 5)
+    else if (choice == "5")
     {
         displayPlayerInfo(playername);
         displayMenu();
@@ -280,7 +287,7 @@ void Select_Choice(int choice)
         Select_Choice(choice);
         return;
     }
-    else if (choice == 6)
+    else if (choice == "6")
     {
         displayLeaderboard("Leaderboard.csv");
         displayMenu();
@@ -288,10 +295,9 @@ void Select_Choice(int choice)
         Select_Choice(choice);
         return;
     }
-    else if (choice == 7)
+    else if (choice == "7")
     {
-        clear_screen();
-        exit(1);
+        exit(0);
     }
     else
     {
@@ -302,22 +308,18 @@ void Select_Choice(int choice)
     }
 }
 
-void do_Choice(double &subchoice)
+void do_Choice(string subchoice)
 {
-    if (subchoice == 1.1)
+    if (subchoice == "1.1")
     {
-        clear_screen();
         easyMode();
     }
-    else if (subchoice == 1.2)
+    else if (subchoice == "1.2")
     {
-        clear_screen();
         hardMode();
     }
-    else if (subchoice == 2.1)
+    else if (subchoice == "2.1")
     {
-        clear_screen();
-        label21:
         displayMaps();
         cout << "Please provide the name of the map you'd like to play with: ";
         string mapname;
@@ -372,10 +374,11 @@ void do_Choice(double &subchoice)
         else
         {
             cout << "Error: Unable to open the selected map.\n";
-            goto label21;
+            string subchoice = "2.1";
+            do_Choice(subchoice);
         }
     }
-    else if (subchoice == 2.2)
+    else if (subchoice == "2.2")
     {
         clear_screen();
         string gridPath, mapname;
@@ -439,7 +442,7 @@ void do_Choice(double &subchoice)
             cout << "Error: Unable to open the specified grid file.\n";
         }
     }
-    else if (subchoice == 3.1)
+    else if (subchoice == "3.1")
     {
         displayMaps();
         cout << "Enter the name of the map you want solved." << endl;
@@ -486,14 +489,13 @@ void do_Choice(double &subchoice)
             int y_pos = 0;
             vector<vector<bool>> path(grid.size(), vector<bool>(grid[0].size(), false));
             path[0][0] = true;
-            clear_screen();
             solveMaze(grid, path_length);
             displayMenu();
-            int choice;
+            string choice;
             cout << "Enter your choice: " << endl;
             cin >> choice;
             Select_Choice(choice);
-            double subchoice;
+            string subchoice;
             cin >> subchoice;
             do_Choice(subchoice);
         }
@@ -502,7 +504,7 @@ void do_Choice(double &subchoice)
             cout << "Error: Unable to open the selected map.\n";
         }
     }
-    else if (subchoice == 3.2)
+    else if (subchoice == "3.2")
     {
         string gridPath, mapname;
         cout << "Enter the path to the grid file: " << endl;
@@ -559,11 +561,11 @@ void do_Choice(double &subchoice)
             path[0][0] = true;
             solveMaze(grid, pathLength);
             displayMenu();
-            int choice;
+            string choice;
             cout << "Enter your choice: " << endl;
             cin >> choice;
             Select_Choice(choice);
-            double subchoice;
+            string subchoice;
             cin >> subchoice;
             do_Choice(subchoice);
         }
@@ -572,15 +574,14 @@ void do_Choice(double &subchoice)
             cout << "Error: Unable to open the specified grid file.\n";
         }
     }
-    else if (subchoice == 0)
+    else if (subchoice == "0")
     {
-        clear_screen();
         displayMenu();
-        int choice;
+        string choice;
         cout << "Enter your choice: " << endl;
         cin >> choice;
         Select_Choice(choice);
-        double subchoice;
+        string subchoice;
         cin >> subchoice;
         do_Choice(subchoice);
     }
@@ -592,44 +593,32 @@ void Resetgame(int &x, int &y, vector<vector<int>> &grid, vector<vector<bool>> &
     y = 0;
     path = vector<vector<bool>>(grid.size(), vector<bool>(grid[0].size(), false));
     path[0][0] = true;
-    int choice;
-    double subchoice;
+    string choice;
+    string subchoice;
     do
     {
         displayMenu();
         cout << "Enter your choice: ";
         cin >> choice;
 
-        switch (choice)
+        if (choice == "1" || choice == "2" || choice == "3")
         {
-        case 1:
             Select_Choice(choice);
             cin >> subchoice;
             do_Choice(subchoice);
-            break;
-        case 2:
+        }
+        else if (choice == "4" || choice == "5" || choice == "6")
+        {
             Select_Choice(choice);
-            cin >> subchoice;
-            do_Choice(subchoice);
-            break;
-        case 3:
-            Select_Choice(choice);
-            break;
-        case 4:
-            Select_Choice(choice);
-            break;
-        case 5:
-            Select_Choice(choice);
-            break;
-        case 6:
-            Select_Choice(choice);
-            break;
-        case 7:
+        }
+        else if (choice == "7")
+        {
             cout << "Exiting the program. Goodbye!\n";
             return;
-        default:
+        }
+        else
+        {
             cout << "Invalid choice. Please try again.\n";
-            break;
         }
     } while (true);
 }
@@ -661,14 +650,13 @@ int main()
             return 1;
         }
     }
-    clear_screen();
     cout << "Hello, " + playername + "! Welcome to Maze Maverick\n";
     displayMenu();
-    int choice;
+    string choice;
     cout << "Enter your choice: " << endl;
     cin >> choice;
     Select_Choice(choice);
-    double subchoice;
+    string subchoice;
     cin >> subchoice;
     do_Choice(subchoice);
 
@@ -917,7 +905,6 @@ void save_grid(const vector<vector<int>> &grid, const string &filename, int cell
         }
 
         file.close();
-        clear_screen();
         cout << "Grid saved to " << full_filepath << endl;
     }
     else
@@ -1109,7 +1096,6 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
 
                 if (playAgain == 'Y' || playAgain == 'y')
                 {
-                    clear_screen();
                     Resetgame(x_pos, y_pos, grid, path);
                 }
                 else
@@ -1307,7 +1293,6 @@ void displayPlayerInfo(const string &playerName)
         t.add(lastWinRec);
         t.add(lastGameDate);
         t.endOfRow();
-        clear_screen();
         cout << t;
     }
     else
@@ -1368,7 +1353,6 @@ void displayLeaderboard(const string &filename)
         }
 
         // Display the leaderboard table
-        clear_screen();
         cout << rec << endl;
 
         leaderboardFile.close();
@@ -1380,76 +1364,107 @@ void displayLeaderboard(const string &filename)
 }
 
 //  function to check if a move is valid or not
-bool isValidMove(int x, int y, const vector<vector<int>> &maze, const vector<vector<bool>> &visited)
+bool isValidMove(int x, int y, const vector<vector<int>> &maze, const vector<vector<pair<bool, Direction>>> &visited)
 {
-    return x >= 0 && x < maze.size() && y >= 0 && y < maze[0].size() && maze[x][y] != 0 && !visited[x][y];
+    return x >= 0 && x < maze.size() && y >= 0 && y < maze[0].size() && maze[x][y] != 0 && !visited[x][y].first;
 }
 
-// DFS function to find the path
-bool dfs(vector<vector<int>> &maze, vector<vector<bool>> &visited, int x, int y, int sum, int target, int maxPathLength, int pathLength)
+bool dfs(vector<vector<int>> &maze, vector<vector<pair<bool, Direction>>> &visited, int x, int y, int sum, int target, int maxPathLength, int &pathLength)
 {
     if (x == maze.size() - 1 && y == maze[0].size() - 1)
     {
-        return sum == target;
-    }
-
-    // Mark the current cell as visited
-    visited[x][y] = true;
-
-    // Path length exceeded the limit
-    if (pathLength > maxPathLength)
-    {
-        visited[x][y] = false;
-        return false;
-    }
-
-    // Directions: right, down, left, up
-    vector<pair<int, int>> directions = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
-    for (const auto &dir : directions)
-    {
-        int newX = x + dir.first;
-        int newY = y + dir.second;
-        if (isValidMove(newX, newY, maze, visited))
+        if (sum == target && pathLength <= maxPathLength)
         {
-            if (dfs(maze, visited, newX, newY, sum + maze[x][y], target, maxPathLength, pathLength + 1))
-            {
-                return true;
-            }
+            return true;
+        }
+        else
+        {
+            return false;
         }
     }
 
-    // If path is not found, backtrack
-    visited[x][y] = false;
+    visited[x][y].first = true;
+
+    if (pathLength > maxPathLength)
+    {
+        visited[x][y].first = false;
+        return false;
+    }
+
+    vector<Direction> directions = {{0, 1, "→"}, {1, 0, "↓"}, {0, -1, "←"}, {-1, 0, "↑"}};
+    for (const auto &dir : directions)
+    {
+        int newX = x + dir.dx;
+        int newY = y + dir.dy;
+        if (isValidMove(newX, newY, maze, visited))
+        {
+            visited[newX][newY].second = dir;
+            pathLength++;
+            if (dfs(maze, visited, newX, newY, sum + maze[x][y], target, maxPathLength, pathLength))
+            {
+                return true;
+            }
+            pathLength--;
+        }
+    }
+
+    visited[x][y].first = false;
     return false;
+}
+
+void printPath(const vector<vector<pair<bool, Direction>>> &visited)
+{
+    for (int i = 0; i < visited.size(); i++)
+    {
+        for (int j = 0; j < visited[i].size(); j++)
+        {
+            if (visited[i][j].first)
+            {
+                // Adjust the spacing based on the position
+                for (int k = 0; k < j; k++)
+                {
+                    cout << "   ";
+                }
+                cout << visited[i][j].second.symbol << "\n";
+            }
+        }
+    }
 }
 
 void solveMaze(vector<vector<int>> &maze, int maxPathLength)
 {
-    // End point
     int targetSum = maze.back().back();
+    vector<vector<pair<bool, Direction>>> visited(maze.size(), vector<pair<bool, Direction>>(maze[0].size(), {false, {0, 0, ""}}));
+    int pathLength = 0;
 
-    // Create a visited 2D vector initialized to false
-    vector<vector<bool>> visited(maze.size(), vector<bool>(maze[0].size(), false));
-
-    if (dfs(maze, visited, 0, 0, 0, targetSum, maxPathLength, 0))
+    if (dfs(maze, visited, 0, 0, 0, targetSum, maxPathLength, pathLength))
     {
-        // Print the maze with the correct path
         for (int i = 0; i < maze.size(); i++)
         {
             for (int j = 0; j < maze[i].size(); j++)
             {
-                if (visited[i][j])
+                if (i == 0 && j == 0) // Start cell
                 {
-                    // Red color for path
-                    cout << "\x1B[31m" << maze[i][j] << "\x1B[0m ";
+                    cout << "\x1B[32m" << setw(2) << maze[i][j] << "\x1B[0m ";
                 }
-                else
+                else if (i == maze.size() - 1 && j == maze[0].size() - 1) // End cell
                 {
-                    cout << maze[i][j] << " ";
+                    cout << "\x1B[34m" << setw(2) << maze[i][j] << "\x1B[0m ";
+                }
+                else if (visited[i][j].first) // Path
+                {
+                    cout << "\x1B[31m" << setw(2) << maze[i][j] << "\x1B[0m ";
+                }
+                else // Regular cell
+                {
+                    cout << setw(2) << maze[i][j] << " ";
                 }
             }
             cout << endl;
         }
+
+        cout << "Path:\n";
+        printPath(visited);
     }
     else
     {
