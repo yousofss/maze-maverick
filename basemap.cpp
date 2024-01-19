@@ -481,17 +481,16 @@ void do_Choice(string subchoice)
     }
     else if (subchoice == "3.1")
     {
-        string gridPath, mapname;
-        cout << "Enter the path to the grid file: " << endl;
-        cin >> gridPath;
-        cout << "Enter the map name: " << endl;
+        displayMaps();
+        cout << "Enter the name of the map you want solved." << endl;
+        string mapname;
         cin >> mapname;
 
-        ifstream file(gridPath);
+        ifstream file("./Maps/" + mapname); // all maps are in the "./Maps/" directory
         if (file.is_open())
         {
             string line;
-            int pathLength;
+            int read_path_length = -1;
             string read_mode;
             string read_creator;
 
@@ -500,7 +499,7 @@ void do_Choice(string subchoice)
             {
                 if (line.find("PathLength: ") == 0)
                 {
-                    pathLength = stoi(line.substr(12));
+                    read_path_length = stoi(line.substr(12));
                 }
                 else if (line.find("Mode: ") == 0)
                 {
@@ -511,21 +510,23 @@ void do_Choice(string subchoice)
                     read_creator = line.substr(9);
                 }
 
-                if (!read_mode.empty() && !read_creator.empty())
+                if (read_path_length != -1 && !read_mode.empty() && !read_creator.empty())
                 {
                     break; // Break out of the loop if all information is found
                 }
             }
 
-            if (read_mode.empty() || read_creator.empty())
+            if (read_path_length == -1 || read_mode.empty() || read_creator.empty())
             {
-                cout << "Error: Mode or Creator information not found in the grid file.\n";
+                cout << "Error: Mode, PathLength, or Creator information not found in the map file.\n";
                 return;
             }
+
+            path_length = read_path_length;
             string mode = read_mode;
             string creator = read_creator;
 
-            cout << "Mode: " << mode << " | Path Length: " << pathLength << " | Creator: " << creator << "\n";
+            cout << "Mode: " << mode << " | Path Length: " << path_length << " | Creator: " << creator << "\n";
 
             vector<vector<int>> grid;
 
