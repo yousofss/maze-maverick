@@ -124,7 +124,7 @@ void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int 
 
 vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen);
 
-void save_grid(const vector<vector<int>> &grid, const string &filename, int cell_width, int path_length);
+void save_grid(const vector<vector<int>> &grid, const string &filename, int cell_width, int path_length, const string &mode, const string &playerName);
 
 void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &path);
 
@@ -330,23 +330,42 @@ void do_Choice(string subchoice)
         {
             string line;
             int read_path_length = -1;
+            string read_mode;
+            string read_creator;
+
+            // Read mode, path length, and creator from the file
             while (getline(file, line))
             {
                 if (line.find("PathLength: ") == 0)
                 {
                     read_path_length = stoi(line.substr(12));
-                    break;
+                }
+                else if (line.find("Mode: ") == 0)
+                {
+                    read_mode = line.substr(6);
+                }
+                else if (line.find("Creator: ") == 0)
+                {
+                    read_creator = line.substr(9);
+                }
+
+                if (read_path_length != -1 && !read_mode.empty() && !read_creator.empty())
+                {
+                    break; // Break out of the loop if all information is found
                 }
             }
 
-            if (read_path_length == -1)
+            if (read_path_length == -1 || read_mode.empty() || read_creator.empty())
             {
-                cout << "Error: PathLength information not found in the map file.\n";
+                cout << "Error: Mode, PathLength, or Creator information not found in the map file.\n";
                 return;
             }
 
             path_length = read_path_length;
-            cout << "Path length: " << path_length << endl;
+            string mode = read_mode;
+            string creator = read_creator;
+
+            cout << "Mode: " << mode << " | Path Length: " << path_length << " | Creator: " << creator << "\n";
 
             vector<vector<int>> grid;
 
@@ -380,7 +399,7 @@ void do_Choice(string subchoice)
     }
     else if (subchoice == "2.2")
     {
-        clear_screen();
+        // clear_screen();
         string gridPath, mapname;
         cout << "Enter the path to the grid file: " << endl;
         cin >> gridPath;
@@ -392,23 +411,41 @@ void do_Choice(string subchoice)
         {
             string line;
             int pathLength;
+            string read_mode;
+            string read_creator;
 
-            // Read the first line for path length
-            if (getline(file, line))
+            // Read mode, path length, and creator from the file
+            while (getline(file, line))
             {
-                istringstream iss(line);
-                string pathLengthLabel;
-                if (!(iss >> pathLengthLabel >> pathLength) || pathLengthLabel != "PathLength:")
+                if (line.find("PathLength: ") == 0)
                 {
-                    cout << "Error: First line does not contain valid 'PathLength' format.\n";
-                    return;
+                    pathLength = stoi(line.substr(12));
+                }
+                else if (line.find("Mode: ") == 0)
+                {
+                    read_mode = line.substr(6);
+                }
+                else if (line.find("Creator: ") == 0)
+                {
+                    read_creator = line.substr(9);
+                }
+
+                if (!read_mode.empty() && !read_creator.empty())
+                {
+                    break; // Break out of the loop if all information is found
                 }
             }
-            else
+
+            if (read_mode.empty() || read_creator.empty())
             {
-                cout << "Error: Unable to read the first line for 'PathLength'.\n";
+                cout << "Error: Mode or Creator information not found in the grid file.\n";
                 return;
             }
+            string mode = read_mode;
+            string creator = read_creator;
+
+            cout << "Mode: " << mode << " | Path Length: " << pathLength << " | Creator: " << creator << "\n";
+
             vector<vector<int>> grid;
 
             while (getline(file, line))
@@ -444,32 +481,52 @@ void do_Choice(string subchoice)
     }
     else if (subchoice == "3.1")
     {
-        displayMaps();
-        cout << "Enter the name of the map you want solved." << endl;
-        string mapname;
+        string gridPath, mapname;
+        cout << "Enter the path to the grid file: " << endl;
+        cin >> gridPath;
+        cout << "Enter the map name: " << endl;
         cin >> mapname;
 
-        ifstream file("./Maps/" + mapname); // all maps are in the "./Maps/" directory
+        ifstream file(gridPath);
         if (file.is_open())
         {
             string line;
-            int read_path_length = -1;
+            int pathLength;
+            string read_mode;
+            string read_creator;
+
+            // Read mode, path length, and creator from the file
             while (getline(file, line))
             {
                 if (line.find("PathLength: ") == 0)
                 {
-                    read_path_length = stoi(line.substr(12));
-                    break;
+                    pathLength = stoi(line.substr(12));
+                }
+                else if (line.find("Mode: ") == 0)
+                {
+                    read_mode = line.substr(6);
+                }
+                else if (line.find("Creator: ") == 0)
+                {
+                    read_creator = line.substr(9);
+                }
+
+                if (!read_mode.empty() && !read_creator.empty())
+                {
+                    break; // Break out of the loop if all information is found
                 }
             }
 
-            if (read_path_length == -1)
+            if (read_mode.empty() || read_creator.empty())
             {
-                cout << "Error: PathLength information not found in the map file.\n";
+                cout << "Error: Mode or Creator information not found in the grid file.\n";
                 return;
             }
+            string mode = read_mode;
+            string creator = read_creator;
 
-            path_length = read_path_length;
+            cout << "Mode: " << mode << " | Path Length: " << pathLength << " | Creator: " << creator << "\n";
+
             vector<vector<int>> grid;
 
             while (getline(file, line))
@@ -517,23 +574,42 @@ void do_Choice(string subchoice)
         {
             string line;
             int pathLength;
+            string read_mode;
+            string read_creator;
 
-            // Read the first line for path length
-            if (getline(file, line))
+            // Read mode, path length, and creator from the file
+            while (getline(file, line))
             {
-                istringstream iss(line);
-                string pathLengthLabel;
-                if (!(iss >> pathLengthLabel >> pathLength) || pathLengthLabel != "PathLength:")
+                if (line.find("PathLength: ") == 0)
                 {
-                    cout << "Error: First line does not contain valid 'PathLength' format.\n";
-                    return;
+                    pathLength = stoi(line.substr(12));
+                }
+                else if (line.find("Mode: ") == 0)
+                {
+                    read_mode = line.substr(6);
+                }
+                else if (line.find("Creator: ") == 0)
+                {
+                    read_creator = line.substr(9);
+                }
+
+                if (!read_mode.empty() && !read_creator.empty())
+                {
+                    break; // Break out of the loop if all information is found
                 }
             }
-            else
+
+            if (read_mode.empty() || read_creator.empty())
             {
-                cout << "Error: Unable to read the first line for 'PathLength'.\n";
+                cout << "Error: Mode or Creator information not found in the grid file.\n";
                 return;
             }
+
+            string mode = read_mode;
+            string creator = read_creator;
+
+            cout << "Mode: " << mode << " | Path Length: " << pathLength << " | Creator: " << creator << "\n";
+
             vector<vector<int>> grid;
 
             while (getline(file, line))
@@ -885,7 +961,7 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
     return grid;
 }
 
-void save_grid(const vector<vector<int>> &grid, const string &filename, int cell_width, int path_length)
+void save_grid(const vector<vector<int>> &grid, const string &filename, int cell_width, int path_length, const string &mode, const string &playerName)
 {
     string full_filepath = "./Maps/" + filename;
 
@@ -893,7 +969,9 @@ void save_grid(const vector<vector<int>> &grid, const string &filename, int cell
 
     if (file.is_open())
     {
+        file << "Mode: " << mode << "\n";
         file << "PathLength: " << path_length << "\n";
+        file << "Creator: " << playerName << "\n";
 
         for (const auto &row : grid)
         {
@@ -924,6 +1002,7 @@ void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &p
         }
     }
     int cell_width = to_string(largest_num).length() + 1;
+
     for (int i = 0; i < grid.size(); i++)
     {
         for (int j = 0; j < grid[i].size(); j++)
@@ -993,8 +1072,8 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
         {
         case 'W': // Move up
         case 'w':
-            x--;                                         // Decrease the row index
-            if (x <= 0 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
+            x--;                                        // Decrease the row index
+            if (x < 0 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
             {
                 x++;
                 moves--;
@@ -1004,8 +1083,8 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             break;
         case 'A': // Move left
         case 'a':
-            y--;                                         // Decrease the column index
-            if (y <= 0 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
+            y--;                                        // Decrease the column index
+            if (y < 0 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
             {
                 y++;
                 moves--;
@@ -1179,7 +1258,7 @@ void easyMode()
     }
     int cell_width = to_string(largest_num).length() + 1;
 
-    save_grid(grid, mapname, cell_width, path_length);
+    save_grid(grid, mapname, cell_width, path_length, "Easy", playername);
 
     vector<vector<bool>> path(x, vector<bool>(y, false));
     path[0][0] = true;
@@ -1226,7 +1305,7 @@ void hardMode()
     }
     int cell_width = to_string(largest_num).length() + 1;
 
-    save_grid(grid, mapname, cell_width, path_length);
+    save_grid(grid, mapname, cell_width, path_length, "Hard", playername);
 
     vector<vector<bool>> path(x, vector<bool>(y, false));
     path[0][0] = true;
