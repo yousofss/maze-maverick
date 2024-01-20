@@ -10,6 +10,7 @@
 #include <chrono>
 #include <ctime>
 #include <unordered_map>
+#include <cstdlib>
 
 #define TEXTTABLE_ENCODE_MULTIBYTE_STRINGS
 #define TEXTTABLE_USE_EN_US_UTF8
@@ -185,13 +186,13 @@ void displayrec(const string &filename, int start, int count) // it's better but
         TextTable rec;
         rec.setAlignment(0, TextTable::Alignment::LEFT);
         rec.setAlignment(1, TextTable::Alignment::LEFT);
-        rec.setAlignment(2, TextTable::Alignment::LEFT);
-        rec.setAlignment(3, TextTable::Alignment::RIGHT);
-        rec.setAlignment(4, TextTable::Alignment::RIGHT);
+        rec.setAlignment(2, TextTable::Alignment::CENTER);
+        rec.setAlignment(3, TextTable::Alignment::CENTER);
+        rec.setAlignment(4, TextTable::Alignment::CENTER);
 
         rec.add("Player");
         rec.add("Map");
-        rec.add("Duration (seconds)");
+        rec.add("Duration/sec");
         rec.add("Result");
         rec.add("Date");
         rec.endOfRow();
@@ -1034,6 +1035,43 @@ void save_grid(const vector<vector<int>> &grid, const string &filename, int cell
     }
 }
 
+// void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &path)
+// {
+//     int largest_num = 0;
+//     for (const auto &row : grid)
+//     {
+//         for (const auto &val : row)
+//         {
+//             largest_num = max(largest_num, val);
+//         }
+//     }
+//     int cell_width = to_string(largest_num).length() + 1;
+
+//     for (int i = 0; i < grid.size(); i++)
+//     {
+//         for (int j = 0; j < grid[i].size(); j++)
+//         {
+//             if (i == 0 && j == 0)
+//             {
+//                 cout << "\x1B[" << START_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the start position in green
+//             }
+//             else if (i == grid.size() - 1 && j == grid[0].size() - 1)
+//             {
+//                 cout << "\x1B[" << END_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the end position in blue
+//             }
+//             else if (path[i][j])
+//             {
+//                 cout << "\x1B[" << PATH_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the cells in the path in yellow
+//             }
+//             else
+//             {
+//                 cout << setw(cell_width) << grid[i][j];
+//             }
+//         }
+//         cout << "\n";
+//     }
+// }
+
 void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &path)
 {
     int largest_num = 0;
@@ -1044,28 +1082,59 @@ void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &p
             largest_num = max(largest_num, val);
         }
     }
-    int cell_width = to_string(largest_num).length() + 1;
+    int cell_width = to_string(largest_num).length() + 2; // Include 1 space on each side for centering
+
+    // Print top border
+    cout << "+";
+    for (int j = 0; j < grid[0].size(); j++)
+    {
+        cout << setw(cell_width + 1) << setfill('-') << "+" << setfill(' ');
+    }
+    cout << "\n";
 
     for (int i = 0; i < grid.size(); i++)
     {
+        // Print left border
+        cout << "|";
+
         for (int j = 0; j < grid[i].size(); j++)
         {
+            string cell = to_string(grid[i][j]);
+            int padding = cell_width - cell.length(); // Calculate total padding
+            int pad_left = padding / 2;               // Padding for the left side
+            int pad_right = padding - pad_left;       // Padding for the right side, adjusted for odd padding
+
             if (i == 0 && j == 0)
             {
-                cout << "\x1B[" << START_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the start position in green
+                cout << setw(pad_left) << ""
+                     << "\x1B[32m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "|"; // Start position in green
             }
             else if (i == grid.size() - 1 && j == grid[0].size() - 1)
             {
-                cout << "\x1B[" << END_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the end position in blue
+                cout << setw(pad_left) << ""
+                     << "\x1B[34m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "|"; // End position in blue
             }
             else if (path[i][j])
             {
-                cout << "\x1B[" << PATH_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the cells in the path in yellow
+                cout << setw(pad_left) << ""
+                     << "\x1B[33m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "|"; // Cells in the path in yellow
             }
             else
             {
-                cout << setw(cell_width) << grid[i][j];
+                cout << setw(pad_left) << "" << cell << setw(pad_right) << ""
+                     << "|";
             }
+        }
+        cout << "\n";
+
+        // Print bottom border
+        cout << "+";
+        for (int j = 0; j < grid[0].size(); j++)
+        {
+            cout << setw(cell_width + 1) << setfill('-') << "+" << setfill(' ');
         }
         cout << "\n";
     }
@@ -1087,10 +1156,14 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
     int playsum = 0;
     int ncount = 4;
     cout << "Enter command (W:up, A:left, S:down, D:right) : ";
+
     while (true)
     {
         cin >> command;
-        moves++;
+
+        // Increment moves only when a valid move is made
+        int prev_x = x;
+        int prev_y = y;
         playsum += grid[x][y];
         if (ncount == 0)
         {
@@ -1108,6 +1181,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             else
             {
                 cout << "gg\n";
+                exit(0);
             }
             return;
         }
@@ -1116,54 +1190,63 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
         case 'W': // Move up
         case 'w':
             x--;
-            // Decrease the row index
-            if (x < 0 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
+            if (x >= 0 && grid[x][y] != 0 && !path[x][y]) // valid move
             {
-                x++;
-                moves--;
-                ncount--;
+                moves++;
+            }
+            else
+            {
+                x = prev_x;
                 playsum -= grid[x][y];
+                ncount--;
             }
             break;
         case 'A': // Move left
         case 'a':
             y--;
-            // Decrease the column index
-            if (y < 0 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
+            if (y >= 0 && grid[x][y] != 0 && !path[x][y]) // valid move
             {
-                y++;
-                moves--;
-                ncount--;
+                moves++;
+            }
+            else
+            {
+                y = prev_y;
                 playsum -= grid[x][y];
+                ncount--;
             }
             break;
         case 'S': // Move down
         case 's':
             x++;
-            // Increase the row index
-            if (x > grid.size() - 1 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
+            if (x < grid.size() && grid[x][y] != 0 && !path[x][y]) // valid move
             {
-                x--;
-                moves--;
-                ncount--;
+                moves++;
+            }
+            else
+            {
+                x = prev_x;
                 playsum -= grid[x][y];
+                ncount--;
             }
             break;
         case 'D': // Move right
         case 'd':
             y++;
-            // increase the column index
-            if (y > grid[0].size() - 1 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
+            if (y < grid[0].size() && grid[x][y] != 0 && !path[x][y]) // valid move
             {
-                y--;
-                moves--;
-                ncount--;
+                moves++;
+            }
+            else
+            {
+                y = prev_y;
                 playsum -= grid[x][y];
+                ncount--;
             }
             break;
         case 'Q':
         case 'q':
-            return;
+            cout << "gg\n";
+            exit(0);
         case 'G':
         case 'g':
             cout << "You gave up. Your final position is (" << x << ", " << y << ").\n";
@@ -1180,11 +1263,10 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             else
             {
                 cout << "gg\n";
-                return;
+                exit(0);
             }
         default:
             cout << "Invalid command. Please try again.\n";
-            moves--;
             continue;
         }
 
@@ -1421,11 +1503,15 @@ void displayPlayerInfo(const string &playerName)
 
         playerFile.close();
 
-        TextTable t('-', '|', '+');
-
+        TextTable t;
+        t.setAlignment(0, TextTable::Alignment::LEFT);
+        t.setAlignment(1, TextTable::Alignment::CENTER);
+        t.setAlignment(2, TextTable::Alignment::CENTER);
+        t.setAlignment(3, TextTable::Alignment::CENTER);
+        t.setAlignment(4, TextTable::Alignment::CENTER);
         // Add headers
         t.add("Player");
-        t.add("Total Games Played");
+        t.add("Total Games");
         t.add("Total Wins");
         t.add("Last Win Record");
         t.add("Last Game Date");
@@ -1472,17 +1558,17 @@ void displayLeaderboard(const string &filename)
         sort(playerRecords.begin(), playerRecords.end());
 
         TextTable rec;
-        rec.setAlignment(0, TextTable::Alignment::RIGHT);
+        rec.setAlignment(0, TextTable::Alignment::CENTER);
         rec.setAlignment(1, TextTable::Alignment::LEFT);
-        rec.setAlignment(2, TextTable::Alignment::RIGHT);
-        rec.setAlignment(3, TextTable::Alignment::RIGHT);
-        rec.setAlignment(4, TextTable::Alignment::RIGHT);
+        rec.setAlignment(2, TextTable::Alignment::CENTER);
+        rec.setAlignment(3, TextTable::Alignment::CENTER);
+        rec.setAlignment(4, TextTable::Alignment::CENTER);
 
         // Add header row to the table
         rec.add("Rank");
         rec.add("Player");
         rec.add("Total Wins");
-        rec.add("Total Best Time (seconds)");
+        rec.add("SRecord");
         rec.add("Total Games");
         rec.endOfRow();
 
