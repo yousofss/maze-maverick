@@ -13,9 +13,15 @@
 #endif
 #endif
 
-class TextTable {
+class TextTable
+{
 public:
-  enum class Alignment { LEFT, RIGHT };
+  enum class Alignment
+  {
+    LEFT,
+    RIGHT,
+    CENTER
+  };
   typedef std::vector<std::string> Row;
   TextTable()
       : _horizontal('-'), _vertical('|'), _corner('+'), _has_ruler(true) {}
@@ -28,7 +34,8 @@ public:
       : _horizontal('\0'), _vertical(vertical), _corner('\0'),
         _has_ruler(false) {}
 
-  void setAlignment(unsigned i, Alignment alignment) {
+  void setAlignment(unsigned i, Alignment alignment)
+  {
     _alignment[i] = alignment;
   }
 
@@ -38,35 +45,44 @@ public:
 
   char horizontal() const { return _horizontal; }
 
-  void add(const std::string& content) { _current.push_back(content); }
+  void add(const std::string &content) { _current.push_back(content); }
 
-  void endOfRow() {
+  void endOfRow()
+  {
     _rows.push_back(_current);
     _current.assign(0, "");
   }
 
-  template <typename Iterator> void addRow(Iterator begin, Iterator end) {
-    for (auto i = begin; i != end; ++i) {
+  template <typename Iterator>
+  void addRow(Iterator begin, Iterator end)
+  {
+    for (auto i = begin; i != end; ++i)
+    {
       add(*i);
     }
     endOfRow();
   }
 
-  template <typename Container> void addRow(const Container& container) {
+  template <typename Container>
+  void addRow(const Container &container)
+  {
     addRow(container.begin(), container.end());
   }
 
-  const std::vector<Row>& rows() const { return _rows; }
+  const std::vector<Row> &rows() const { return _rows; }
 
-  void setup() const {
+  void setup() const
+  {
     determineWidths();
     setupAlignment();
   }
 
-  std::string ruler() const {
+  std::string ruler() const
+  {
     std::string result;
     result += _corner;
-    for (auto width = _width.begin(); width != _width.end(); ++width) {
+    for (auto width = _width.begin(); width != _width.end(); ++width)
+    {
       result += repeat(*width, _horizontal);
       result += _corner;
     }
@@ -78,7 +94,8 @@ public:
 
   bool has_ruler() const { return _has_ruler; }
 
-  int correctDistance(const std::string& string_to_correct) const {
+  int correctDistance(const std::string &string_to_correct) const
+  {
     return static_cast<int>(string_to_correct.size()) -
            static_cast<int>(glyphLength(string_to_correct));
   };
@@ -92,9 +109,11 @@ private:
   std::vector<Row> _rows;
   std::vector<unsigned> mutable _width;
   std::vector<unsigned> mutable _utf8width;
+  // std::map<unsigned, Alignment> mutable _alignment;
   std::map<unsigned, Alignment> mutable _alignment;
 
-  static std::string repeat(unsigned times, char c) {
+  static std::string repeat(unsigned times, char c)
+  {
     std::string result;
     for (; times > 0; --times)
       result += c;
@@ -104,7 +123,8 @@ private:
 
   unsigned columns() const { return _rows[0].size(); }
 
-  unsigned glyphLength(const std::string& s) const {
+  unsigned glyphLength(const std::string &s) const
+  {
     unsigned int _byteLength = s.length();
 #ifdef TEXTTABLE_ENCODE_MULTIBYTE_STRINGS
 #ifdef TEXTTABLE_USE_EN_US_UTF8
@@ -115,7 +135,8 @@ private:
     unsigned int u = 0;
     const char *c_str = s.c_str();
     unsigned _glyphLength = 0;
-    while (u < _byteLength) {
+    while (u < _byteLength)
+    {
       u += std::mblen(&c_str[u], _byteLength - u);
       _glyphLength += 1;
     }
@@ -125,65 +146,92 @@ private:
 #endif
   }
 
-  void determineWidths() const {
-    if (_rows.empty()) {
+  void determineWidths() const
+  {
+    if (_rows.empty())
+    {
       return;
     }
     _width.assign(columns(), 0);
     _utf8width.assign(columns(), 0);
     for (auto rowIterator = _rows.begin(); rowIterator != _rows.end();
-         ++rowIterator) {
+         ++rowIterator)
+    {
       Row const &row = *rowIterator;
-      for (unsigned i = 0; i < row.size(); ++i) {
+      for (unsigned i = 0; i < row.size(); ++i)
+      {
         _width[i] =
             _width[i] > glyphLength(row[i]) ? _width[i] : glyphLength(row[i]);
       }
     }
   }
 
-  void setupAlignment() const {
-    if (_rows.empty()) {
+  void setupAlignment() const
+  {
+    if (_rows.empty())
+    {
       return;
     }
-    for (unsigned i = 0; i < columns(); ++i) {
-      if (_alignment.find(i) == _alignment.end()) {
+    for (unsigned i = 0; i < columns(); ++i)
+    {
+      if (_alignment.find(i) == _alignment.end())
+      {
         _alignment[i] = Alignment::LEFT;
+      }
+      else if (_alignment[i] == Alignment::CENTER)
+      {
+        // Use a constant value to represent center alignment
+        _alignment[i] = Alignment::CENTER;
       }
     }
   }
 };
 
-inline std::ostream &operator<<(std::ostream &stream, const TextTable& table) {
-  if (table.rows().empty()) {
-    return stream;
-  }
-  table.setup();
-  if (table.has_ruler()) {
-    stream << table.ruler() << "\n";
-  }
-  for (auto rowIterator = table.rows().begin();
-       rowIterator != table.rows().end(); ++rowIterator) {
-    TextTable::Row const &row = *rowIterator;
-    stream << table.vertical();
-    for (unsigned i = 0; i < row.size(); ++i) {
-      auto alignment = table.alignment(i) == TextTable::Alignment::LEFT
-                           ? std::left
-                           : std::right;
-      // std::setw( width ) works as follows: a string which goes in the stream
-      // with byte length (!) l is filled with n spaces so that l+n=width. For a
-      // utf8 encoded string the glyph length g might be smaller than l. We need
-      // n spaces so that g+n=width which is equivalent to g+n+l-l=width ==> l+n
-      // = width+l-g l-g (that means glyph length minus byte length) has to be
-      // added to the width argument. l-g is computed by correctDistance.
-      stream << std::setw(table.width(i) + table.correctDistance(row[i]))
-             << alignment << row[i];
-      stream << table.vertical();
+inline std::ostream &operator<<(std::ostream &stream, const TextTable &table)
+{
+    if (table.rows().empty())
+    {
+        return stream;
     }
-    stream << "\n";
-    if (table.has_ruler()) {
-      stream << table.ruler() << "\n";
+    table.setup();
+    if (table.has_ruler())
+    {
+        stream << table.ruler() << "\n";
     }
-  }
+    for (auto rowIterator = table.rows().begin(); rowIterator != table.rows().end(); ++rowIterator)
+    {
+        TextTable::Row const &row = *rowIterator;
+        stream << table.vertical();
+        for (unsigned i = 0; i < row.size(); ++i)
+        {
+            auto alignment = table.alignment(i);
+            auto content = row[i];
+            auto padding = table.width(i) + table.correctDistance(content);
 
-  return stream;
+            if (alignment == TextTable::Alignment::LEFT)
+            {
+                stream << std::setw(padding) << std::left << content;
+            }
+            else if (alignment == TextTable::Alignment::CENTER)
+            {
+                auto left_padding = (padding - content.size()) / 2;
+                auto right_padding = padding - content.size() - left_padding;
+                stream << std::setw(left_padding) << "" << content << std::setw(right_padding) << "";
+            }
+            else // TextTable::Alignment::RIGHT
+            {
+                stream << std::setw(padding) << std::right << content;
+            }
+
+            stream << table.vertical();
+        }
+
+        stream << "\n";
+        if (table.has_ruler())
+        {
+            stream << table.ruler() << "\n";
+        }
+    }
+
+    return stream;
 }
