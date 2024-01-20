@@ -120,6 +120,10 @@ void saverec(const string &playerName, const chrono::seconds &game_duration, con
 
 void updateLeaderboard(const string &playername, const string &leaderboardFilename);
 
+vector<int> ImpossiblePathLengths(int x, int y, int path_length);
+
+bool isImpossiblePathLength(int x, int y, int path_length);
+
 void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int destY, int a_l, int a_u, int b_l, int b_u, int &path_sum, mt19937 &gen);
 
 vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen);
@@ -871,6 +875,45 @@ void updateLeaderboard(const string &playername, const string &leaderboardFilena
     }
 }
 
+vector<int> ImpossiblePathLengths(int x, int y, int path_length)
+{
+    vector<int> impossibleLengths;
+    int minPathLength = x + y - 2;
+
+    int maxPathLength = x * y;
+    if (maxPathLength % 2 == 0)
+    {
+        maxPathLength -= 2;
+    }
+    else
+    {
+        maxPathLength--;
+    }
+
+    for (int i = minPathLength + 1; i <= maxPathLength; i++)
+    {
+        if (i % 2 != 0)
+        {
+            impossibleLengths.push_back(i);
+        }
+    }
+    return impossibleLengths;
+}
+
+bool isImpossiblePathLength(int x, int y, int path_length)
+{
+    vector<int> impossibleLengths = ImpossiblePathLengths(x, y, path_length);
+    // check if the path length is in the vector of impossible lengths
+    for (int i = 0; i < impossibleLengths.size(); i++)
+    {
+        if (path_length == impossibleLengths[i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Function to perform recursive backtracking and generate a path
 void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int destY, int a_l, int a_u, int &path_sum, mt19937 &gen, vector<pair<int, int>> &pathCells, int &maxPathCells)
 {
@@ -932,7 +975,6 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
     vector<vector<int>> grid(x, vector<int>(y, 0));
     vector<pair<int, int>> pathCells(path_length);
     int path_sum = 0;
-
     // Generate path with random numbers within the range [a_l, a_u] excluding 0
     recursiveBacktrack(grid, 0, 0, x - 1, y - 1, a_l, a_u, path_sum, gen, pathCells, path_length);
 
@@ -1073,7 +1115,8 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
         {
         case 'W': // Move up
         case 'w':
-            x--;                                        // Decrease the row index
+            x--;
+            // Decrease the row index
             if (x < 0 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
             {
                 x++;
@@ -1084,7 +1127,8 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             break;
         case 'A': // Move left
         case 'a':
-            y--;                                        // Decrease the column index
+            y--;
+            // Decrease the column index
             if (y < 0 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
             {
                 y++;
@@ -1095,7 +1139,8 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             break;
         case 'S': // Move down
         case 's':
-            x++;                                                      // Increase the row index
+            x++;
+            // Increase the row index
             if (x > grid.size() - 1 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
             {
                 x--;
@@ -1106,7 +1151,8 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             break;
         case 'D': // Move right
         case 'd':
-            y++;                                                         // increase the column index
+            y++;
+            // increase the column index
             if (y > grid[0].size() - 1 || grid[x][y] == 0 || path[x][y]) // invalid move set things back
             {
                 y--;
@@ -1127,7 +1173,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             char playAgain;
             cin >> playAgain;
 
-            if (playAgain == 'Y' || playAgain == 'y')
+            if (playAgain == 'A' || playAgain == 'a')
             {
                 Resetgame(x_pos, y_pos, grid, path);
             }
@@ -1284,6 +1330,25 @@ void hardMode()
     {
         cout << "Invalid path length. Please enter a value between " << min_plen << " and " << max_plen << ": ";
         cin >> path_length;
+    }
+    while (true)
+    {
+        if (!isImpossiblePathLength(x, y, path_length))
+        {
+            cout << "path_length that you've give me is impossible to make " << endl;
+            vector<int> impossibleLengths = ImpossiblePathLengths(x, y, path_length);
+            cout << "Impossible path lengths are: ";
+            for (int length : impossibleLengths)
+            {
+                cout << length << " ";
+            }
+            cout << "\nplease provide me a possible path_length : ";
+            cin >> path_length;
+        }
+        else
+        {
+            break;
+        }
     }
     cout << "Please enter the path period's lower (a_l) and upper (a_u) bounds: ";
     cin >> a_l >> a_u;
@@ -1453,7 +1518,7 @@ bool dfs(vector<vector<int>> &maze, vector<vector<pair<bool, Direction>>> &visit
 {
     if (x == maze.size() - 1 && y == maze[0].size() - 1)
     {
-        if (sum == target && pathLength <= maxPathLength)
+        if (sum == target && (pathLength == maxPathLength))
         {
             return true;
         }
@@ -1487,7 +1552,6 @@ bool dfs(vector<vector<int>> &maze, vector<vector<pair<bool, Direction>>> &visit
             pathLength--;
         }
     }
-
     visited[x][y].first = false;
     return false;
 }
@@ -1503,7 +1567,7 @@ void printPath(const vector<vector<pair<bool, Direction>>> &visited)
                 // Adjust the spacing based on the position
                 for (int k = 0; k < j; k++)
                 {
-                    cout << "   ";
+                    cout << " ";
                 }
                 cout << visited[i][j].second.symbol << "\n";
             }
