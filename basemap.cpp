@@ -10,6 +10,7 @@
 #include <chrono>
 #include <ctime>
 #include <unordered_map>
+#include <deque>
 #include <cstdlib>
 
 #define TEXTTABLE_ENCODE_MULTIBYTE_STRINGS
@@ -147,7 +148,9 @@ bool dfs(vector<vector<int>> &maze, vector<vector<bool>> &visited, int x, int y,
 
 void solveMaze(vector<vector<int>> &maze, int maxPathLength);
 
-void displayrec(const string &filename, int start, int count) // it's better but it should be fix for remain lees than 10 rows it shouldn't asl for showing another page
+void display_SolvedMaze(const vector<vector<int>> &grid, const vector<vector<pair<bool, Direction>>> &path);
+
+void displayrec(const string &filename, int &start, int count) // it's better but it should be fix for remain lees than 10 rows it shouldn't ask for showing another page
 {
     ifstream historyFile(filename);
     if (historyFile.is_open())
@@ -161,7 +164,6 @@ void displayrec(const string &filename, int start, int count) // it's better but
         {
             recordCount++;
         }
-
         // Read and display the next 'count' records
         while (getline(historyFile, line) && recordCount < start + count)
         {
@@ -181,11 +183,10 @@ void displayrec(const string &filename, int start, int count) // it's better but
             }
         }
 
-        reverse(playerRecords.begin(), playerRecords.end());
-
         TextTable rec;
+
         rec.setAlignment(0, TextTable::Alignment::LEFT);
-        rec.setAlignment(1, TextTable::Alignment::LEFT);
+        rec.setAlignment(1, TextTable::Alignment::CENTER);
         rec.setAlignment(2, TextTable::Alignment::CENTER);
         rec.setAlignment(3, TextTable::Alignment::CENTER);
         rec.setAlignment(4, TextTable::Alignment::CENTER);
@@ -757,19 +758,53 @@ void displayMaps()
     }
 }
 
-void saverec(const string &playerName, const chrono::seconds &game_duration, const string &filename, const string &mapname, bool win) //  we should delate date and Ranking in the right way , find players time win and calculate wins for every map one time
+void saverec(const string &playerName, const chrono::seconds &game_duration, const string &filename, const string &mapname, bool win)
 {
-    ofstream historyFile(filename, ios::app);
-    if (historyFile.is_open())
+    // Read the existing records into a deque of strings
+    deque<string> records;
+    ifstream historyInFile(filename);
+    if (historyInFile.is_open())
     {
-        auto current_time = chrono::system_clock::to_time_t(chrono::system_clock::now());
-        struct tm *timeinfo;
-        timeinfo = localtime(&current_time);
-        char buffer[80];
-        strftime(buffer, sizeof(buffer), "%m/%d/%Y", timeinfo);
+        string line;
+        while (getline(historyInFile, line))
+        {
+            records.push_back(line);
+        }
+        historyInFile.close();
+    }
+    else
+    {
+        cout << "Unable to open " << filename << " for reading player history.\n";
+        return;
+    }
 
-        historyFile << playerName << "," << game_duration.count() << "," << buffer << "," << mapname << "," << (win ? "win" : "loss") << "\n";
-        historyFile.close();
+    // Prepare the new record
+    auto current_time = chrono::system_clock::to_time_t(chrono::system_clock::now());
+    struct tm *timeinfo;
+    timeinfo = localtime(&current_time);
+    char buffer[80];
+    strftime(buffer, sizeof(buffer), "%m/%d/%Y", timeinfo);
+    string newRecord = playerName + "," + to_string(game_duration.count()) + "," + buffer + "," + mapname + "," + (win ? "win" : "loss");
+
+    // Add the new record at the second position of the deque
+    if (records.size() >= 1) // Check if there is at least one record
+    {
+        records.insert(records.begin() + 1, newRecord);
+    }
+    else // If there are no records, just add the new record
+    {
+        records.push_back(newRecord);
+    }
+
+    // Write the deque back to the file
+    ofstream historyOutFile(filename);
+    if (historyOutFile.is_open())
+    {
+        for (const auto &record : records)
+        {
+            historyOutFile << record << "\n";
+        }
+        historyOutFile.close();
     }
     else
     {
@@ -1034,43 +1069,6 @@ void save_grid(const vector<vector<int>> &grid, const string &filename, int cell
         cout << "Unable to open file\n";
     }
 }
-
-// void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &path)
-// {
-//     int largest_num = 0;
-//     for (const auto &row : grid)
-//     {
-//         for (const auto &val : row)
-//         {
-//             largest_num = max(largest_num, val);
-//         }
-//     }
-//     int cell_width = to_string(largest_num).length() + 1;
-
-//     for (int i = 0; i < grid.size(); i++)
-//     {
-//         for (int j = 0; j < grid[i].size(); j++)
-//         {
-//             if (i == 0 && j == 0)
-//             {
-//                 cout << "\x1B[" << START_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the start position in green
-//             }
-//             else if (i == grid.size() - 1 && j == grid[0].size() - 1)
-//             {
-//                 cout << "\x1B[" << END_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the end position in blue
-//             }
-//             else if (path[i][j])
-//             {
-//                 cout << "\x1B[" << PATH_COLOR << "m" << setw(cell_width) << grid[i][j] << "\x1B[0m"; // Print the cells in the path in yellow
-//             }
-//             else
-//             {
-//                 cout << setw(cell_width) << grid[i][j];
-//             }
-//         }
-//         cout << "\n";
-//     }
-// }
 
 void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &path)
 {
@@ -1568,7 +1566,7 @@ void displayLeaderboard(const string &filename)
         rec.add("Rank");
         rec.add("Player");
         rec.add("Total Wins");
-        rec.add("SRecord");
+        rec.add("Total Records");
         rec.add("Total Games");
         rec.endOfRow();
 
@@ -1669,35 +1667,80 @@ void solveMaze(vector<vector<int>> &maze, int maxPathLength)
 
     if (dfs(maze, visited, 0, 0, 0, targetSum, maxPathLength, pathLength))
     {
-        for (int i = 0; i < maze.size(); i++)
-        {
-            for (int j = 0; j < maze[i].size(); j++)
-            {
-                if (i == 0 && j == 0) // Start cell
-                {
-                    cout << "\x1B[32m" << setw(2) << maze[i][j] << "\x1B[0m ";
-                }
-                else if (i == maze.size() - 1 && j == maze[0].size() - 1) // End cell
-                {
-                    cout << "\x1B[34m" << setw(2) << maze[i][j] << "\x1B[0m ";
-                }
-                else if (visited[i][j].first) // Path
-                {
-                    cout << "\x1B[31m" << setw(2) << maze[i][j] << "\x1B[0m ";
-                }
-                else // Regular cell
-                {
-                    cout << setw(2) << maze[i][j] << " ";
-                }
-            }
-            cout << endl;
-        }
-
+        display_SolvedMaze(maze, visited);
         cout << "Path:\n";
         printPath(visited);
     }
     else
     {
         cout << "No path found that meets the conditions." << endl;
+    }
+}
+
+void display_SolvedMaze(const vector<vector<int>> &grid, const vector<vector<pair<bool, Direction>>> &path)
+{
+    int largest_num = 0;
+    for (const auto &row : grid)
+    {
+        for (const auto &val : row)
+        {
+            largest_num = max(largest_num, val);
+        }
+    }
+    int cell_width = to_string(largest_num).length() + 2; // Include 1 space on each side for centering
+
+    // Print top border
+    cout << "+";
+    for (int j = 0; j < grid[0].size(); j++)
+    {
+        cout << setw(cell_width + 1) << setfill('-') << "+" << setfill(' ');
+    }
+    cout << "\n";
+
+    for (int i = 0; i < grid.size(); i++)
+    {
+        // Print left border
+        cout << "|";
+
+        for (int j = 0; j < grid[i].size(); j++)
+        {
+            string cell = to_string(grid[i][j]);
+            int padding = cell_width - cell.length(); // Calculate total padding
+            int pad_left = padding / 2;               // Padding for the left side
+            int pad_right = padding - pad_left;       // Padding for the right side, adjusted for odd padding
+
+            if (i == 0 && j == 0)
+            {
+                cout << setw(pad_left) << ""
+                     << "\x1B[32m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "|"; // Start position in green
+            }
+            else if (i == grid.size() - 1 && j == grid[0].size() - 1)
+            {
+                cout << setw(pad_left) << ""
+                     << "\x1B[34m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "|"; // End position in blue
+            }
+            else if (path[i][j].first)
+            {
+                cout << setw(pad_left) << ""
+                     << "\x1B[31m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "|"; // Cells in the path in red
+            }
+            else
+            {
+                cout << setw(pad_left) << "" << cell << setw(pad_right) << ""
+                     << "|";
+            }
+        }
+        cout << "\n";
+
+        // Print bottom border
+        cout << "+";
+        for (int j = 0; j < grid[0].size(); j++)
+        {
+            cout << setw(cell_width + 1) << setfill('-') << "+" << setfill(' ');
+        }
+        cout << "\n";
     }
 }
