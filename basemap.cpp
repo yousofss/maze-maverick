@@ -12,6 +12,9 @@
 #include <unordered_map>
 #include <deque>
 #include <cstdlib>
+#include <thread>
+#include <conio.h>
+#include <windows.h>
 
 #define TEXTTABLE_ENCODE_MULTIBYTE_STRINGS
 #define TEXTTABLE_USE_EN_US_UTF8
@@ -28,6 +31,9 @@ const int END_COLOR = 34;
 const int PATH_COLOR = 33;
 int path_length, path_sum;
 int startIndex = 0;
+int hours = 0;
+int minutes = 0;
+int seconds = 0;
 string playername;
 
 struct Direction
@@ -133,6 +139,8 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
 void save_grid(const vector<vector<int>> &grid, const string &filename, int cell_width, int path_length, const string &mode, const string &playerName);
 
 void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &path);
+
+void displayClock(int &hours, int &minutes, int &seconds);
 
 void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int &x, int &y, int &path_length, const string &playername, const string &mapname);
 
@@ -1111,13 +1119,13 @@ void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &p
             else if (i == grid.size() - 1 && j == grid[0].size() - 1)
             {
                 cout << setw(pad_left) << ""
-                     << "\x1B[34m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "\x1B[94m" << cell << "\x1B[0m" << setw(pad_right) << ""
                      << "|"; // End position in blue
             }
             else if (path[i][j])
             {
                 cout << setw(pad_left) << ""
-                     << "\x1B[33m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "\x1B[93m" << cell << "\x1B[0m" << setw(pad_right) << ""
                      << "|"; // Cells in the path in yellow
             }
             else
@@ -1138,6 +1146,23 @@ void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &p
     }
 }
 
+void displayClock(int &hours, int &minutes, int &seconds)
+{
+    int consoleWidth = 80; // Assuming a console width of 80 columns
+
+    // Calculate the position to align in the right corner
+    int position = consoleWidth - 26;
+
+    // Move the cursor to the correct position
+    cout << "\033[" << position << "G";
+
+    // Display the timer
+    cout << "\x1B[95m" << "| "  << "\x1B[0m"<< setfill(' ') << setw(2) << "\x1B[95m" << hours << " hrs | " <<"\x1B[0m";
+    cout << setfill(' ') << setw(2) << "\x1B[95m" << minutes << " min | " << "\x1B[0m";
+    cout << setfill(' ') << setw(2) << "\x1B[95m"  << seconds << " sec |" << "\x1B[0m" << endl;
+}
+
+
 void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int &x, int &y, int &path_length, const string &playername, const string &mapname)
 {
     chrono::seconds game_duration;
@@ -1154,7 +1179,10 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
     int playsum = 0;
     int ncount = 4;
     cout << "Enter command (W:up, A:left, S:down, D:right) : ";
+    
+    int hours = 0, minutes = 0, seconds = 0;
 
+    displayClock(hours, minutes, seconds);
     while (true)
     {
         cin >> command;
@@ -1354,7 +1382,13 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 }
             }
         }
+
+        hours = game_duration.count() / 3600;
+        minutes = (game_duration.count() % 3600) / 60;
+        seconds = game_duration.count() % 60;
+
         clear_screen();
+        displayClock(hours, minutes, seconds);
         display_grid(grid, path);
     }
 }
@@ -1718,7 +1752,7 @@ void display_SolvedMaze(const vector<vector<int>> &grid, const vector<vector<pai
             else if (i == grid.size() - 1 && j == grid[0].size() - 1)
             {
                 cout << setw(pad_left) << ""
-                     << "\x1B[34m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "\x1B[94m" << cell << "\x1B[0m" << setw(pad_right) << ""
                      << "|"; // End position in blue
             }
             else if (path[i][j].first)
