@@ -13,13 +13,22 @@
 #include <deque>
 #include <cstdlib>
 #include <thread>
-#include <conio.h>
-#include <windows.h>
 
 #define TEXTTABLE_ENCODE_MULTIBYTE_STRINGS
 #define TEXTTABLE_USE_EN_US_UTF8
 
 #include "table.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#include <conio.h>
+#include <direct.h>
+#elif __linux__
+#include <unistd.h>
+#include <sys/stat.h>
+#else
+#error "Unknown compiler"
+#endif
 
 using namespace std;
 namespace fs = filesystem;
@@ -31,9 +40,7 @@ const int END_COLOR = 34;
 const int PATH_COLOR = 33;
 int path_length, path_sum;
 int startIndex = 0;
-int hours = 0;
-int minutes = 0;
-int seconds = 0;
+
 string playername;
 
 struct Direction
@@ -118,6 +125,24 @@ bool doesFileExist(const string &filePath)
 {
     ifstream file(filePath);
     return file.good();
+}
+
+bool doesDirectoryExist(const std::string &dirName)
+{
+    DWORD attribs = ::GetFileAttributesA(dirName.c_str());
+    if (attribs == INVALID_FILE_ATTRIBUTES) {
+        return false;
+    }
+    return (attribs & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+void createDirectory(const string &dirPath)
+{
+    if (!doesDirectoryExist(dirPath))
+    {
+        mkdir(dirPath.c_str()); // For Unix-based systems (Linux, MacOS) _mkdir(dirPath.c_str(), 0777)
+        // _mkdir(dirPath.c_str()) :  For Windows
+    }
 }
 
 void easyMode();
@@ -338,7 +363,6 @@ void do_Choice(string subchoice)
         cout << "Please provide the name of the map you'd like to play with: ";
         string mapname;
         cin >> mapname;
-
         ifstream file("./Maps/" + mapname); // all maps are in the "./Maps/" directory
         if (file.is_open())
         {
@@ -1148,6 +1172,8 @@ void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &p
 
 void displayClock(int &hours, int &minutes, int &seconds)
 {
+    // cout << setfill(' ') << setw(55) << "           TIMER           \n";
+
     int consoleWidth = 80; // Assuming a console width of 80 columns
 
     // Calculate the position to align in the right corner
@@ -1157,11 +1183,15 @@ void displayClock(int &hours, int &minutes, int &seconds)
     cout << "\033[" << position << "G";
 
     // Display the timer
-    cout << "\x1B[95m" << "| "  << "\x1B[0m"<< setfill(' ') << setw(2) << "\x1B[95m" << hours << " hrs | " <<"\x1B[0m";
-    cout << setfill(' ') << setw(2) << "\x1B[95m" << minutes << " min | " << "\x1B[0m";
-    cout << setfill(' ') << setw(2) << "\x1B[95m"  << seconds << " sec |" << "\x1B[0m" << endl;
+    cout << "\x1B[95m"
+         << "| "
+         << "\x1B[0m" << setfill(' ') << setw(2) << "\x1B[95m" << hours << " hrs | "
+         << "\x1B[0m";
+    cout << setfill(' ') << setw(2) << "\x1B[95m" << minutes << " min | "
+         << "\x1B[0m";
+    cout << setfill(' ') << setw(2) << "\x1B[95m" << seconds << " sec |"
+         << "\x1B[0m" << endl;
 }
-
 
 void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int &x, int &y, int &path_length, const string &playername, const string &mapname)
 {
@@ -1403,6 +1433,7 @@ void easyMode()
     cin >> y;
     path_length = x + y - 2;
     cout << "Path length: " << path_length << endl;
+    createDirectory("./Maps/");
     vector<vector<int>> grid = create_grid(x, y, a_l, a_u, b_l, b_u, path_length, gen);
     string mapname;
     cout << "Say your grid name : ";
@@ -1468,6 +1499,7 @@ void hardMode()
     cin >> a_l >> a_u;
     cout << "Please enter the lower (b_l) and upper (b_u) bounds for the rest of the grid: ";
     cin >> b_l >> b_u;
+    createDirectory("./Maps/");
     vector<vector<int>>
         grid = create_grid(x, y, a_l, a_u, b_l, b_u, path_length, gen);
     string mapname;
