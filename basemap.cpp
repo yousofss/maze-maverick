@@ -1093,6 +1093,10 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
             if (grid[i][j] == 0)
             {
                 grid[i][j] = getRandomInt(a_l, a_u, gen);
+                if (grid[i][j] == 0)
+                {
+                    grid[i][j] = getRandomInt(a_l, a_u, gen);
+                }
             }
         }
     }
@@ -1518,7 +1522,7 @@ void hardMode()
     max_plen = x * y - 2;
     cout << "Enter the path length: ";
     cin >> path_length;
-    while (path_length < min_plen || path_length >= max_plen)
+    while (path_length < min_plen || path_length > max_plen)
     {
         cout << "Invalid path length. Please enter a value between " << min_plen << " and " << max_plen << ": ";
         cin >> path_length;
