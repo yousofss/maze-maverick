@@ -67,7 +67,6 @@ struct PlayerRecord
         return duration < other.duration;
     }
 };
-
 struct GameRecord
 {
     string playerName;
@@ -83,13 +82,18 @@ struct LeaderboardRecord
     int totalWins;
     int totalBestRec;
     int totalGames;
+    double winRate; // New member for win rate
 
-    LeaderboardRecord(const string &name, int wins, int bestTime, int games)
-        : playerName(name), totalWins(wins), totalBestRec(bestTime), totalGames(games) {}
+    LeaderboardRecord(const string &name, int wins, int bestTime, int games, double rate)
+        : playerName(name), totalWins(wins), totalBestRec(bestTime), totalGames(games), winRate(rate) {}
 
     bool operator<(const LeaderboardRecord &other) const
     {
         // Sort by total wins first, then by lesser total best time for ties
+        if (winRate != other.winRate)
+        {
+            return winRate > other.winRate;
+        }
         if (totalWins != other.totalWins)
         {
             return totalWins > other.totalWins;
@@ -130,7 +134,8 @@ bool doesFileExist(const string &filePath)
 bool doesDirectoryExist(const std::string &dirName)
 {
     DWORD attribs = ::GetFileAttributesA(dirName.c_str());
-    if (attribs == INVALID_FILE_ATTRIBUTES) {
+    if (attribs == INVALID_FILE_ATTRIBUTES)
+    {
         return false;
     }
     return (attribs & FILE_ATTRIBUTE_DIRECTORY);
@@ -267,8 +272,6 @@ void displayMenu()
 
 void Select_Choice(string choice)
 {
-    string playerFilePath = "./Users/" + playername + ".csv";
-    bool fileExists = doesFileExist(playerFilePath);
     if (choice == "1")
     {
         cout << "1.1 Easy" << endl;
@@ -277,9 +280,18 @@ void Select_Choice(string choice)
     }
     else if (choice == "2")
     {
+        createDirectory("./Users/");
+        string playerFilePath = "./Users/" + playername + ".csv";
+        bool fileExists = doesFileExist(playerFilePath);
         if (!fileExists)
         {
             ofstream playerFile("./Users/" + playername + ".csv", ios::app);
+            playerFile.close();
+        }
+        bool file = doesFileExist("./Leaderboard.csv");
+        if (!file)
+        {
+            ofstream playerFile("./Leaderboard.csv", ios::app);
             playerFile.close();
         }
         cout << "2.1 Choose from Existing Maps" << endl;
@@ -288,12 +300,19 @@ void Select_Choice(string choice)
     }
     else if (choice == "3")
     {
+        createDirectory("./Users/");
         cout << "3.1 Choose from Existing Maps" << endl;
         cout << "3.2 Import a Custom Map" << endl;
         cout << "Enter your choice: (0 to return to the main menu) ";
     }
     else if (choice == "4")
     {
+        bool fileExists = doesFileExist("./play_history");
+        if (!fileExists)
+        {
+            ofstream playerFile("play_history", ios::app);
+            playerFile.close();
+        }
         const int recordsPerPage = 10;
 
         displayrec("play_history.csv", startIndex, recordsPerPage);
@@ -320,6 +339,9 @@ void Select_Choice(string choice)
     }
     else if (choice == "5")
     {
+        createDirectory("./Users/");
+        string playerFilePath = "./Users/" + playername + ".csv";
+        bool fileExists = doesFileExist(playerFilePath);
         displayPlayerInfo(playername);
         displayMenu();
         cin >> choice;
@@ -328,6 +350,12 @@ void Select_Choice(string choice)
     }
     else if (choice == "6")
     {
+        bool fileExists = doesFileExist("./Leaderboard.csv");
+        if (!fileExists)
+        {
+            ofstream playerFile("./Leaderboard.csv", ios::app);
+            playerFile.close();
+        }
         displayLeaderboard("Leaderboard.csv");
         displayMenu();
         cin >> choice;
@@ -523,7 +551,7 @@ void do_Choice(string subchoice)
         cout << "Enter the name of the map you want solved." << endl;
         string mapname;
         cin >> mapname;
-
+        createDirectory("./Maps/");
         ifstream file("./Maps/" + mapname); // all maps are in the "./Maps/" directory
         if (file.is_open())
         {
@@ -729,7 +757,7 @@ void Resetgame(int &x, int &y, vector<vector<int>> &grid, vector<vector<bool>> &
         else if (choice == "7")
         {
             cout << "Exiting the program. Goodbye!\n";
-            return;
+            exit(0);
         }
         else
         {
@@ -794,6 +822,12 @@ void saverec(const string &playerName, const chrono::seconds &game_duration, con
 {
     // Read the existing records into a deque of strings
     deque<string> records;
+    bool fileExists = doesFileExist("./play_history.csv");
+    if (!fileExists)
+    {
+        ofstream playerFile("./play_history.csv", ios::app);
+        playerFile.close();
+    }
     ifstream historyInFile(filename);
     if (historyInFile.is_open())
     {
@@ -847,9 +881,7 @@ void saverec(const string &playerName, const chrono::seconds &game_duration, con
 void updateLeaderboard(const string &playername, const string &leaderboardFilename)
 {
     ifstream playerFile("./Users/" + playername + ".csv");
-    ofstream leaderboardFile(leaderboardFilename, ios::app);
-
-    if (playerFile.is_open() && leaderboardFile.is_open())
+    if (playerFile.is_open())
     {
         unordered_map<string, int> bestTimes; // Map to store best times for each map
 
@@ -884,6 +916,12 @@ void updateLeaderboard(const string &playername, const string &leaderboardFilena
 
         playerFile.close();
 
+        // Calculate win rate
+        double winRate;
+        if (totalGames > 0)
+        {
+            winRate = static_cast<double>(totalWins) / totalGames;
+        }
         // Calculate total best times by summing the best times for each map
         int totalRecords = 0;
         for (const auto &pair : bestTimes)
@@ -892,7 +930,7 @@ void updateLeaderboard(const string &playername, const string &leaderboardFilena
         }
 
         // Read the leaderboard file
-        map<string, tuple<int, int, int>> leaderboardMap;
+        map<string, tuple<int, int, int, double>> leaderboardMap;
         ifstream leaderboardInFile(leaderboardFilename);
         if (leaderboardInFile.is_open())
         {
@@ -901,21 +939,22 @@ void updateLeaderboard(const string &playername, const string &leaderboardFilena
                 istringstream iss(line);
                 string name;
                 int wins, bestTime, games;
+                double winRate;
                 if (getline(iss, name, ',') &&
                     (iss >> wins) && iss.ignore() &&
                     (iss >> bestTime) && iss.ignore() &&
-                    (iss >> games))
+                    (iss >> games) && iss.ignore() && (iss >> winRate))
                 {
-                    leaderboardMap[name] = make_tuple(wins, bestTime, games);
+                    leaderboardMap[name] = make_tuple(wins, bestTime, games, winRate);
                 }
             }
             leaderboardInFile.close();
 
             // Update player leaderboard
-            leaderboardMap[playername] = make_tuple(totalWins, totalRecords, totalGames);
+            leaderboardMap[playername] = make_tuple(totalWins, totalRecords, totalGames, winRate);
 
             // Write the updated leaderboard back to the file
-            ofstream leaderboardOutFile(leaderboardFilename);
+            ofstream leaderboardOutFile(leaderboardFilename); // Open without ios::app
             if (leaderboardOutFile.is_open())
             {
                 for (const auto &entry : leaderboardMap)
@@ -923,7 +962,8 @@ void updateLeaderboard(const string &playername, const string &leaderboardFilena
                     leaderboardOutFile << entry.first << ","
                                        << get<0>(entry.second) << ","
                                        << get<1>(entry.second) << ","
-                                       << get<2>(entry.second) << "\n";
+                                       << get<2>(entry.second) << ","
+                                       << fixed << setprecision(4) << get<3>(entry.second) << "\n"; // Add win rate to the file
                 }
                 leaderboardOutFile.close();
             }
@@ -1137,20 +1177,20 @@ void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &p
             if (i == 0 && j == 0)
             {
                 cout << setw(pad_left) << ""
-                     << "\x1B[32m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "\033[38;5;76m" << cell << "\x1B[0m" << setw(pad_right) << ""
                      << "|"; // Start position in green
             }
             else if (i == grid.size() - 1 && j == grid[0].size() - 1)
             {
                 cout << setw(pad_left) << ""
-                     << "\x1B[94m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "\033[38;5;21m" << cell << "\x1B[0m" << setw(pad_right) << ""
                      << "|"; // End position in blue
             }
             else if (path[i][j])
             {
                 cout << setw(pad_left) << ""
-                     << "\x1B[93m" << cell << "\x1B[0m" << setw(pad_right) << ""
-                     << "|"; // Cells in the path in yellow
+                     << "\033[38;5;202m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "|"; // Cells in the path in orange
             }
             else
             {
@@ -1172,8 +1212,6 @@ void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &p
 
 void displayClock(int &hours, int &minutes, int &seconds)
 {
-    // cout << setfill(' ') << setw(55) << "           TIMER           \n";
-
     int consoleWidth = 80; // Assuming a console width of 80 columns
 
     // Calculate the position to align in the right corner
@@ -1183,13 +1221,13 @@ void displayClock(int &hours, int &minutes, int &seconds)
     cout << "\033[" << position << "G";
 
     // Display the timer
-    cout << "\x1B[95m"
+    cout << "\033[38;5;162m"
          << "| "
-         << "\x1B[0m" << setfill(' ') << setw(2) << "\x1B[95m" << hours << " hrs | "
+         << "\x1B[0m" << setfill(' ') << setw(2) << "\033[38;5;162m" << hours << " hrs | "
          << "\x1B[0m";
-    cout << setfill(' ') << setw(2) << "\x1B[95m" << minutes << " min | "
+    cout << setfill(' ') << setw(2) << "\033[38;5;162m" << minutes << " min | "
          << "\x1B[0m";
-    cout << setfill(' ') << setw(2) << "\x1B[95m" << seconds << " sec |"
+    cout << setfill(' ') << setw(2) << "\033[38;5;162m" << seconds << " sec |"
          << "\x1B[0m" << endl;
 }
 
@@ -1209,7 +1247,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
     int playsum = 0;
     int ncount = 4;
     cout << "Enter command (W:up, A:left, S:down, D:right) : ";
-    
+
     int hours = 0, minutes = 0, seconds = 0;
 
     displayClock(hours, minutes, seconds);
@@ -1221,15 +1259,18 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
         int prev_x = x;
         int prev_y = y;
         playsum += grid[x][y];
+
         if (ncount == 0)
         {
+            win = false;
             cout << "You got to deadend ." << endl;
-            cout << "if you want to play again (A or a) , if you want Quite (Q or q) : ";
+            cout << "if you want to play again (Y) , if you want Quite (N) : ";
             int choice;
             double subchoice;
             char playAgain;
             cin >> playAgain;
             saverec(playername, game_duration, "play_history.csv", mapname, win);
+
             if (playAgain == 'Y' || playAgain == 'y')
             {
                 Resetgame(x_pos, y_pos, grid, path);
@@ -1239,7 +1280,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 cout << "gg\n";
                 exit(0);
             }
-            return;
+            // return;
         }
         switch (command)
         {
@@ -1249,6 +1290,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             if (x >= 0 && grid[x][y] != 0 && !path[x][y]) // valid move
             {
                 moves++;
+                ncount = 4;
             }
             else
             {
@@ -1263,6 +1305,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             if (y >= 0 && grid[x][y] != 0 && !path[x][y]) // valid move
             {
                 moves++;
+                ncount = 4;
             }
             else
             {
@@ -1277,6 +1320,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             if (x < grid.size() && grid[x][y] != 0 && !path[x][y]) // valid move
             {
                 moves++;
+                ncount = 4;
             }
             else
             {
@@ -1291,6 +1335,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             if (y < grid[0].size() && grid[x][y] != 0 && !path[x][y]) // valid move
             {
                 moves++;
+                ncount = 4;
             }
             else
             {
@@ -1305,14 +1350,16 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
             exit(0);
         case 'G':
         case 'g':
+            win = false;
+            saverec(playername, game_duration, "play_history.csv", mapname, win);
             cout << "You gave up. Your final position is (" << x << ", " << y << ").\n";
-            cout << "if you want to play again (A or a) , if you want Quit (Q or q) : ";
+            cout << "if you want to play again (Y) , if you want Quit (N) : ";
             int choice;
             double subchoice;
             char playAgain;
             cin >> playAgain;
 
-            if (playAgain == 'A' || playAgain == 'a')
+            if (playAgain == 'Y' || playAgain == 'y')
             {
                 Resetgame(x_pos, y_pos, grid, path);
             }
@@ -1608,17 +1655,19 @@ void displayLeaderboard(const string &filename)
             istringstream iss(line);
             string playerName;
             int totalWins, totalBestRec, totalGames;
+            double winRate;
 
             if (getline(iss, playerName, ',') &&
                 (iss >> totalWins) && iss.ignore() &&
                 (iss >> totalBestRec) && iss.ignore() &&
-                (iss >> totalGames))
+                (iss >> totalGames) && iss.ignore() &&
+                (iss >> winRate))
             {
-                playerRecords.push_back({playerName, totalWins, totalBestRec, totalGames});
+                playerRecords.push_back({playerName, totalWins, totalBestRec, totalGames, winRate});
             }
         }
 
-        // Sort the player records. (total win -> lesser total time)
+        // Sort the player records.
         sort(playerRecords.begin(), playerRecords.end());
 
         TextTable rec;
@@ -1627,6 +1676,7 @@ void displayLeaderboard(const string &filename)
         rec.setAlignment(2, TextTable::Alignment::CENTER);
         rec.setAlignment(3, TextTable::Alignment::CENTER);
         rec.setAlignment(4, TextTable::Alignment::CENTER);
+        rec.setAlignment(5, TextTable::Alignment::CENTER);
 
         // Add header row to the table
         rec.add("Rank");
@@ -1634,16 +1684,21 @@ void displayLeaderboard(const string &filename)
         rec.add("Total Wins");
         rec.add("Total Records");
         rec.add("Total Games");
+        rec.add("Win Rate"); // New column for win rate
         rec.endOfRow();
 
         // Add player records to the table
         for (size_t i = 0; i < playerRecords.size(); ++i)
         {
+            ostringstream streamObj;
+            streamObj << fixed << setprecision(2) << playerRecords[i].winRate * 100;
+            string winRateStr = streamObj.str();
             rec.add(to_string(i + 1));
             rec.add(playerRecords[i].playerName);
             rec.add(to_string(playerRecords[i].totalWins));
             rec.add(to_string(playerRecords[i].totalBestRec));
             rec.add(to_string(playerRecords[i].totalGames));
+            rec.add(winRateStr + "%");
             rec.endOfRow();
         }
 
@@ -1719,7 +1774,7 @@ void printPath(const vector<vector<pair<bool, Direction>>> &visited)
                 {
                     cout << " ";
                 }
-                cout << visited[i][j].second.symbol << "\n";
+                cout << "\033[38;5;118m " << visited[i][j].second.symbol << "\x1B[0m\n";
             }
         }
     }
@@ -1778,20 +1833,20 @@ void display_SolvedMaze(const vector<vector<int>> &grid, const vector<vector<pai
             if (i == 0 && j == 0)
             {
                 cout << setw(pad_left) << ""
-                     << "\x1B[32m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "\033[38;5;76m" << cell << "\x1B[0m" << setw(pad_right) << ""
                      << "|"; // Start position in green
             }
             else if (i == grid.size() - 1 && j == grid[0].size() - 1)
             {
                 cout << setw(pad_left) << ""
-                     << "\x1B[94m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "\033[38;5;21m" << cell << "\x1B[0m" << setw(pad_right) << ""
                      << "|"; // End position in blue
             }
             else if (path[i][j].first)
             {
                 cout << setw(pad_left) << ""
-                     << "\x1B[31m" << cell << "\x1B[0m" << setw(pad_right) << ""
-                     << "|"; // Cells in the path in red
+                     << "\033[38;5;198m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "|"; // Cells in the path in pink
             }
             else
             {
