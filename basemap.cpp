@@ -1051,7 +1051,7 @@ void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int 
     }
 
     grid[x][y] = getRandomInt(a_l, a_u, gen);
-    if (grid[x][y] == 0)
+    while (grid[x][y] == 0)
     {
         grid[x][y] = getRandomInt(a_l, a_u, gen);
     }
