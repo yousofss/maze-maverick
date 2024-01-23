@@ -18,16 +18,14 @@
 #define TEXTTABLE_USE_EN_US_UTF8
 
 #include "table.h"
+#include <sys/stat.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #include <conio.h>
 #include <direct.h>
-#elif __linux__
-#include <unistd.h>
-#include <sys/stat.h>
 #else
-#error "Unknown compiler"
+#include <unistd.h>
 #endif
 
 using namespace std;
@@ -133,20 +131,30 @@ bool doesFileExist(const string &filePath)
 
 bool doesDirectoryExist(const std::string &dirName)
 {
-    DWORD attribs = ::GetFileAttributesA(dirName.c_str());
-    if (attribs == INVALID_FILE_ATTRIBUTES)
+    struct stat info;
+    if (stat(dirName.c_str(), &info) != 0)
     {
-        return false;
+        return false; // Cannot access the path
     }
-    return (attribs & FILE_ATTRIBUTE_DIRECTORY);
+    else if (info.st_mode & S_IFDIR) // S_IFDIR means it's a directory
+    {
+        return true;
+    }
+    else
+    {
+        return false; // Path exists but it's not a directory
+    }
 }
 
-void createDirectory(const string &dirPath)
+void createDirectory(const std::string &dirPath)
 {
     if (!doesDirectoryExist(dirPath))
     {
-        mkdir(dirPath.c_str()); // For Unix-based systems (Linux, MacOS) _mkdir(dirPath.c_str(), 0777)
-        // _mkdir(dirPath.c_str()) :  For Windows
+        #ifdef _WIN32
+            _mkdir(dirPath.c_str());
+        #else
+            mkdir(dirPath.c_str(), 0777); // Use mkdir with permission flags on Unix
+        #endif
     }
 }
 
