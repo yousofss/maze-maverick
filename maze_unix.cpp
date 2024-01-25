@@ -431,10 +431,10 @@ void Select_Choice(int choice)
     case 2:
         break;
     case 3:
-        historyExists = doesFileExist("./play_history");
+        historyExists = doesFileExist("./play_history.csv");
         if (!historyExists)
         {
-            ofstream playerFile("play_history", ios::app);
+            ofstream playerFile("play_history.csv", ios::app);
             playerFile.close();
         }
 

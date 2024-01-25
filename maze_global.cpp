@@ -335,10 +335,10 @@ void Select_Choice(string choice)
     }
     else if (choice == "4")
     {
-        bool fileExists = doesFileExist("./play_history");
+        bool fileExists = doesFileExist("./play_history.csv");
         if (!fileExists)
         {
-            ofstream playerFile("play_history", ios::app);
+            ofstream playerFile("play_history.csv", ios::app);
             playerFile.close();
         }
         const int recordsPerPage = 10;
