@@ -13,6 +13,7 @@
 #include <deque>
 #include <cstdlib>
 #include <thread>
+#include <ncurses.h>
 
 #define TEXTTABLE_ENCODE_MULTIBYTE_STRINGS
 #define TEXTTABLE_USE_EN_US_UTF8
@@ -202,7 +203,7 @@ void displayClock(int &hours, int &minutes, int &seconds);
 
 void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int &x, int &y, int &path_length, const string &playername, const string &mapname);
 
-void displayMaps();
+string displayMaps();
 
 void displayPlayerInfo(const string &playerName);
 
@@ -215,6 +216,10 @@ bool dfs(vector<vector<int>> &maze, vector<vector<bool>> &visited, int x, int y,
 void solveMaze(vector<vector<int>> &maze, int maxPathLength);
 
 void display_SolvedMaze(const vector<vector<int>> &grid, const vector<vector<pair<bool, Direction>>> &path);
+
+void do_Choice(string subchoice);
+
+void Select_Choice(int choice);
 
 void displayrec(const string &filename, int &start, int count) // it's better but it should be fix for remain lees than 10 rows it shouldn't ask for showing another page
 {
@@ -287,61 +292,151 @@ void displayrec(const string &filename, int &start, int count) // it's better bu
 
 void displayMenu()
 {
-    cout << "----- Menu -----" << endl;
-    cout << "1. Create a New Map" << endl;
-    cout << "2. Playground" << endl;
-    cout << "3. Solve a Maze" << endl;
-    cout << "4. History" << endl;
-    cout << "5. Player Information" << endl;
-    cout << "6. Leaderboard" << endl;
-    cout << "7. Exit" << endl;
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+
+    string Menu[7] = {"Create a New Map", "Playground", "Solve a Maze", "History", "Player Information", "Leaderboard", "Exit"};
+    int pointer = 0;
+
+    while (true)
+    {
+        clear();
+        printw("----Main Menu----\n\n");
+
+        for (int i = 0; i < 7; ++i)
+        {
+            if (i == pointer)
+            {
+                attron(A_STANDOUT);
+                printw("%s\n", Menu[i].c_str());
+                attroff(A_STANDOUT);
+            }
+            else
+            {
+                printw("%s\n", Menu[i].c_str());
+            }
+        }
+
+        int ch = getch();
+
+        switch (ch)
+        {
+        case KEY_UP:
+            pointer = pointer > 0 ? pointer - 1 : 6;
+            break;
+        case KEY_DOWN:
+            pointer = pointer < 6 ? pointer + 1 : 0;
+            break;
+        case '\n': // Enter key
+        case '\r':
+        case KEY_ENTER:
+            switch (pointer)
+            {
+            case 0:
+                Select_Choice(0);
+                break;
+            case 1:
+                Select_Choice(1);
+                break;
+            case 2:
+                Select_Choice(2);
+                break;
+            case 3:
+                nocbreak();
+                echo();
+                keypad(stdscr, FALSE);
+
+                // End ncurses mode
+                endwin();
+
+                Select_Choice(3);
+
+                initscr();
+                cbreak();
+                noecho();
+                keypad(stdscr, TRUE);
+                break;
+            case 4:
+                nocbreak();
+                echo();
+                keypad(stdscr, FALSE);
+
+                // End ncurses mode
+                endwin();
+
+                Select_Choice(4);
+
+                initscr();
+                cbreak();
+                noecho();
+                keypad(stdscr, TRUE);
+                break;
+            case 5:
+                nocbreak();
+                echo();
+                keypad(stdscr, FALSE);
+
+                // End ncurses mode
+                endwin();
+
+                Select_Choice(5);
+
+                initscr();
+                cbreak();
+                noecho();
+                keypad(stdscr, TRUE);
+                break;
+            case 6:
+                nocbreak();
+                echo();
+                keypad(stdscr, FALSE);
+
+                // End ncurses mode
+                endwin();
+                clear_screen();
+                exit(0);
+            }
+            break;
+        }
+
+        refresh();
+        usleep(100000);
+    }
+    // Reverse the settings
+    nocbreak();
+    echo();
+    keypad(stdscr, FALSE);
+
+    // End ncurses mode
+    endwin();
     return;
 }
 
-void Select_Choice(string choice)
+void Select_Choice(int choice)
 {
-    if (choice == "1")
+    bool historyExists;
+    const int recordsPerPage = 10;
+    string playerFilePath;
+    bool leaderExists;
+    int viewMore;
+    int ch;
+    switch (choice)
     {
-        cout << "1.1 Easy" << endl;
-        cout << "1.2 Hard" << endl;
-        cout << "Enter your choice: (0 to return to the main menu) ";
-    }
-    else if (choice == "2")
-    {
-        createDirectory("./Users/");
-        string playerFilePath = "./Users/" + playername + ".csv";
-        bool fileExists = doesFileExist(playerFilePath);
-        if (!fileExists)
-        {
-            ofstream playerFile("./Users/" + playername + ".csv", ios::app);
-            playerFile.close();
-        }
-        bool file = doesFileExist("./Leaderboard.csv");
-        if (!file)
-        {
-            ofstream playerFile("./Leaderboard.csv", ios::app);
-            playerFile.close();
-        }
-        cout << "2.1 Choose from Existing Maps" << endl;
-        cout << "2.2 Import a Custom Map" << endl;
-        cout << "Enter your choice: (0 to return to the main menu) ";
-    }
-    else if (choice == "3")
-    {
-        createDirectory("./Users/");
-        cout << "3.1 Choose from Existing Maps" << endl;
-        cout << "3.2 Import a Custom Map" << endl;
-        cout << "Enter your choice: (0 to return to the main menu) ";
-    }
-    else if (choice == "4")
-    {
-        bool fileExists = doesFileExist("./play_history");
-        if (!fileExists)
+    case 0:
+        break;
+    case 1:
+        break;
+    case 2:
+        break;
+    case 3:
+        historyExists = doesFileExist("./play_history");
+        if (!historyExists)
         {
             ofstream playerFile("play_history", ios::app);
             playerFile.close();
         }
-        const int recordsPerPage = 10;
 
         displayrec("play_history.csv", startIndex, recordsPerPage);
 
@@ -361,45 +456,261 @@ void Select_Choice(string choice)
             // If no, reset the startIndex for the next time the user chooses to view records
             startIndex = 0;
             displayMenu();
-            cin >> choice;
-            Select_Choice(choice);
         }
-    }
-    else if (choice == "5")
-    {
+        break;
+    case 4:
+        clear_screen();
         createDirectory("./Users/");
-        string playerFilePath = "./Users/" + playername + ".csv";
-        bool fileExists = doesFileExist(playerFilePath);
+        playerFilePath = "./Users/" + playername + ".csv";
         displayPlayerInfo(playername);
-        displayMenu();
-        cin >> choice;
-        Select_Choice(choice);
-        return;
-    }
-    else if (choice == "6")
-    {
-        bool fileExists = doesFileExist("./Leaderboard.csv");
-        if (!fileExists)
+        ch = getch();
+        // cin >> ch;
+        if (ch == '\n')
+        {
+            displayMenu();
+        }
+        break;
+    case 5:
+        clear_screen();
+        leaderExists = doesFileExist("./Leaderboard.csv");
+        if (!leaderExists)
         {
             ofstream playerFile("./Leaderboard.csv", ios::app);
             playerFile.close();
         }
         displayLeaderboard("Leaderboard.csv");
+        ch = getch();
+        // cin >> ch;
+        if (ch == '\n')
+        {
+            displayMenu();
+        }
+        break;
+    default:
+        printw("%s\n", "Invalid choice\n");
         displayMenu();
-        cin >> choice;
-        Select_Choice(choice);
-        return;
+        break;
     }
-    else if (choice == "7")
+    int pointer = 0;
+
+    if (choice == 0)
     {
-        exit(0);
+        initscr();
+        cbreak();
+        noecho();
+        keypad(stdscr, TRUE);
+        string Menu[3] = {"Easy", "Hard", "Back to main menu"};
+        while (true)
+        {
+            clear();
+            printw("Select the mode:\n\n");
+
+            for (int i = 0; i < 3; ++i)
+            {
+                if (i == pointer)
+                {
+                    attron(A_STANDOUT);
+                    printw("%s\n", Menu[i].c_str());
+                    attroff(A_STANDOUT);
+                }
+                else
+                {
+                    printw("%s\n", Menu[i].c_str());
+                }
+            }
+
+            int ch = getch();
+
+            switch (ch)
+            {
+            case KEY_UP:
+                pointer = pointer > 0 ? pointer - 1 : 2;
+                break;
+            case KEY_DOWN:
+                pointer = pointer < 2 ? pointer + 1 : 0;
+                break;
+            case '\n': // Enter key
+                switch (pointer)
+                {
+                case 0:
+                    // Reverse the settings
+                    nocbreak();
+                    echo();
+                    keypad(stdscr, FALSE);
+
+                    // End ncurses mode
+                    endwin();
+
+                    do_Choice("1.1");
+
+                    initscr();
+                    cbreak();
+                    noecho();
+                    keypad(stdscr, TRUE);
+                    break;
+                case 1:
+                    // Reverse the settings
+                    nocbreak();
+                    echo();
+                    keypad(stdscr, FALSE);
+
+                    // End ncurses mode
+                    endwin();
+
+                    do_Choice("1.2");
+
+                    initscr();
+                    cbreak();
+                    noecho();
+                    keypad(stdscr, TRUE);
+                    break;
+                case 2:
+                    displayMenu();
+                    break;
+                }
+                break;
+            }
+
+            refresh();
+            usleep(100000);
+        }
+        // Reverse the settings
+        nocbreak();
+        echo();
+        keypad(stdscr, FALSE);
+
+        // End ncurses mode
+        endwin();
     }
-    else
+    else if (choice == 1)
     {
-        cout << "Invalid choice" << endl;
-        displayMenu();
-        cin >> choice;
-        Select_Choice(choice);
+        string Menu[3] = {"Choose from Existing Maps", "Import a Custom Map", "Back to main menu"};
+        while (true)
+        {
+            clear();
+            printw("Choose one of the followings:\n\n");
+
+            for (int i = 0; i < 3; ++i)
+            {
+                if (i == pointer)
+                {
+                    attron(A_STANDOUT);
+                    printw("%s\n", Menu[i].c_str());
+                    attroff(A_STANDOUT);
+                }
+                else
+                {
+                    printw("%s\n", Menu[i].c_str());
+                }
+            }
+
+            int ch = getch();
+
+            switch (ch)
+            {
+            case KEY_UP:
+                pointer = pointer > 0 ? pointer - 1 : 2;
+                break;
+            case KEY_DOWN:
+                pointer = pointer < 2 ? pointer + 1 : 0;
+                break;
+            case '\n': // Enter key
+                switch (pointer)
+                {
+                case 0:
+                    do_Choice("2.1");
+                    break;
+                case 1:
+                    // Reverse the settings
+                    nocbreak();
+                    echo();
+                    keypad(stdscr, FALSE);
+
+                    // End ncurses mode
+                    endwin();
+
+                    do_Choice("2.2");
+
+                    initscr();
+                    cbreak();
+                    noecho();
+                    keypad(stdscr, TRUE);
+                    break;
+                case 2:
+                    displayMenu();
+                    break;
+                }
+                break;
+            }
+
+            refresh();
+            usleep(100000);
+        }
+    }
+    else if (choice == 2)
+    {
+        string Menu[3] = {"Choose from Existing Maps", "Import a Custom Map", "Back to main menu"};
+        while (true)
+        {
+            clear();
+            printw("Choose one of the followings:\n\n");
+
+            for (int i = 0; i < 3; ++i)
+            {
+                if (i == pointer)
+                {
+                    attron(A_STANDOUT);
+                    printw("%s\n", Menu[i].c_str());
+                    attroff(A_STANDOUT);
+                }
+                else
+                {
+                    printw("%s\n", Menu[i].c_str());
+                }
+            }
+
+            int ch = getch();
+
+            switch (ch)
+            {
+            case KEY_UP:
+                pointer = pointer > 0 ? pointer - 1 : 2;
+                break;
+            case KEY_DOWN:
+                pointer = pointer < 2 ? pointer + 1 : 0;
+                break;
+            case '\n': // Enter key
+                switch (pointer)
+                {
+                case 0:
+                    do_Choice("3.1");
+                    break;
+                case 1:
+                    // Reverse the settings
+                    nocbreak();
+                    echo();
+                    keypad(stdscr, FALSE);
+
+                    // End ncurses mode
+                    endwin();
+
+                    do_Choice("3.2");
+
+                    initscr();
+                    cbreak();
+                    noecho();
+                    keypad(stdscr, TRUE);
+                    break;
+                case 2:
+                    displayMenu();
+                    break;
+                }
+                break;
+            }
+
+            refresh();
+            usleep(100000);
+        }
     }
 }
 
@@ -415,10 +726,15 @@ void do_Choice(string subchoice)
     }
     else if (subchoice == "2.1")
     {
-        displayMaps();
-        cout << "Please provide the name of the map you'd like to play with: ";
-        string mapname;
-        cin >> mapname;
+        string mapname = displayMaps();
+        // Reverse the settings
+        nocbreak();
+        echo();
+        keypad(stdscr, FALSE);
+
+        // End ncurses mode
+        endwin();
+
         ifstream file("./Maps/" + mapname); // all maps are in the "./Maps/" directory
         if (file.is_open())
         {
@@ -575,10 +891,7 @@ void do_Choice(string subchoice)
     }
     else if (subchoice == "3.1")
     {
-        displayMaps();
-        cout << "Enter the name of the map you want solved." << endl;
-        string mapname;
-        cin >> mapname;
+        string mapname = displayMaps();
         createDirectory("./Maps/");
         ifstream file("./Maps/" + mapname); // all maps are in the "./Maps/" directory
         if (file.is_open())
@@ -641,15 +954,21 @@ void do_Choice(string subchoice)
             int y_pos = 0;
             vector<vector<bool>> path(grid.size(), vector<bool>(grid[0].size(), false));
             path[0][0] = true;
+            // Reverse the settings
+            nocbreak();
+            echo();
+            keypad(stdscr, FALSE);
+
+            // End ncurses mode
+            endwin();
+
             solveMaze(grid, path_length);
-            displayMenu();
-            string choice;
-            cout << "Enter your choice: " << endl;
-            cin >> choice;
-            Select_Choice(choice);
-            string subchoice;
-            cin >> subchoice;
-            do_Choice(subchoice);
+            cout << "Press enter to continue." << endl;
+            int ch = getch();
+            if (ch == '\n')
+            {
+                displayMenu();
+            }
         }
         else
         {
@@ -730,31 +1049,26 @@ void do_Choice(string subchoice)
             int y_pos = 0;
             vector<vector<bool>> path(grid.size(), vector<bool>(grid[0].size(), false));
             path[0][0] = true;
+            // Reverse the settings
+            nocbreak();
+            echo();
+            keypad(stdscr, FALSE);
+
+            // End ncurses mode
+            endwin();
+
             solveMaze(grid, pathLength);
-            displayMenu();
-            string choice;
-            cout << "Enter your choice: " << endl;
-            cin >> choice;
-            Select_Choice(choice);
-            string subchoice;
-            cin >> subchoice;
-            do_Choice(subchoice);
+            cout << "Press enter to continue." << endl;
+            int ch = getch();
+            if (ch == '\n')
+            {
+                displayMenu();
+            }
         }
         else
         {
             cout << "Error: Unable to open the specified grid file.\n";
         }
-    }
-    else if (subchoice == "0")
-    {
-        displayMenu();
-        string choice;
-        cout << "Enter your choice: " << endl;
-        cin >> choice;
-        Select_Choice(choice);
-        string subchoice;
-        cin >> subchoice;
-        do_Choice(subchoice);
     }
 }
 
@@ -768,28 +1082,11 @@ void Resetgame(int &x, int &y, vector<vector<int>> &grid, vector<vector<bool>> &
     string subchoice;
     do
     {
-        displayMenu();
-        cout << "Enter your choice: ";
-        cin >> choice;
-
-        if (choice == "1" || choice == "2" || choice == "3")
+        cout << "Press enter to continue." << endl;
+        int ch = getch();
+        if (ch == '\n')
         {
-            Select_Choice(choice);
-            cin >> subchoice;
-            do_Choice(subchoice);
-        }
-        else if (choice == "4" || choice == "5" || choice == "6")
-        {
-            Select_Choice(choice);
-        }
-        else if (choice == "7")
-        {
-            cout << "Exiting the program. Goodbye!\n";
-            exit(0);
-        }
-        else
-        {
-            cout << "Invalid choice. Please try again.\n";
+            displayMenu();
         }
     } while (true);
 }
@@ -823,26 +1120,54 @@ int main()
     }
     cout << "Hello, " + playername + "! Welcome to Maze Maverick\n";
     displayMenu();
-    string choice;
-    cout << "Enter your choice: " << endl;
-    cin >> choice;
-    Select_Choice(choice);
-    string subchoice;
-    cin >> subchoice;
-    do_Choice(subchoice);
-
-    return 0;
 }
 
-void displayMaps()
+string displayMaps()
 {
     string pathaddress = "./Maps";
-    int index = 1;
-
+    vector<string> Menu;
+    int pointer = 0;
     for (const auto &entry : fs::directory_iterator(pathaddress))
     {
-        cout << index << ". " << entry.path().filename() << endl;
-        index++;
+        Menu.push_back(entry.path().filename());
+    }
+    int menuSize = Menu.size();
+    while (true)
+    {
+        clear();
+        printw("Choose one of the followings:\n\n");
+
+        for (int i = 0; i < menuSize; ++i)
+        {
+            if (i == pointer)
+            {
+                attron(A_STANDOUT);
+                printw("%s\n", Menu[i].c_str());
+                attroff(A_STANDOUT);
+            }
+            else
+            {
+                printw("%s\n", Menu[i].c_str());
+            }
+        }
+
+        int ch = getch();
+
+        switch (ch)
+        {
+        case KEY_UP:
+            pointer = pointer > 0 ? pointer - 1 : menuSize - 1;
+            break;
+        case KEY_DOWN:
+            pointer = pointer < menuSize - 1 ? pointer + 1 : 0;
+            break;
+        case '\n': // Enter key
+            return Menu[pointer];
+            break;
+        }
+
+        refresh();
+        usleep(100000);
     }
 }
 
@@ -1167,6 +1492,7 @@ void save_grid(const vector<vector<int>> &grid, const string &filename, int cell
 
         file.close();
         cout << "Grid saved to " << full_filepath << endl;
+        cout << "Press enter to continue." << endl;
     }
     else
     {
@@ -1278,7 +1604,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
     int moves = 0;
     int playsum = 0;
     int ncount = 4;
-    cout << "Enter command (W:up, A:left, S:down, D:right) : ";
+    cout << "Enter command (W:up, A:left, S:down, D:right): (Q for quit, G for give up)";
 
     int hours = 0, minutes = 0, seconds = 0;
 
@@ -1319,7 +1645,6 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 cout << "gg\n";
                 exit(0);
             }
-            // return;
         }
         switch (command)
         {
@@ -1451,7 +1776,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 else
                 {
                     cout << "gg\n";
-                    return;
+                    displayMenu();
                 }
             }
             else
@@ -1511,6 +1836,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
 
 void easyMode()
 {
+    clear_screen();
     int x, y, a_l = -3, a_u = 3, b_l = 2, b_u = 5, path_length;
     int min_plen, max_plen;
     cout << "Enter the number of rows: ";
@@ -1547,6 +1873,7 @@ void easyMode()
 
 void hardMode()
 {
+    clear_screen();
     int x, y, a_l, a_u, b_l, b_u, path_length;
     int min_plen, max_plen;
     cout << "Enter the number of rows: ";
@@ -1675,6 +2002,7 @@ void displayPlayerInfo(const string &playerName)
         t.add(lastGameDate);
         t.endOfRow();
         cout << t;
+        cout << "Press Enter to go back to the main menu.\n";
     }
     else
     {
@@ -1745,6 +2073,7 @@ void displayLeaderboard(const string &filename)
         cout << rec << endl;
 
         leaderboardFile.close();
+        cout << "Press Enter to go back to the main menu.\n";
     }
     else
     {
