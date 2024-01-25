@@ -41,6 +41,26 @@ int startIndex = 0;
 
 string playername;
 
+#ifdef __unix__ // includes Linux and macOS
+#include <termios.h>
+#include <unistd.h>
+
+// Function to set the terminal to raw mode
+void enableRawMode(struct termios &orig_termios)
+{
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    struct termios raw = orig_termios;
+    raw.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+}
+
+// Function to restore the terminal to its original state
+void disableRawMode(struct termios &orig_termios)
+{
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
+}
+#endif
+
 struct Direction
 {
     int dx, dy;
@@ -150,11 +170,11 @@ void createDirectory(const std::string &dirPath)
 {
     if (!doesDirectoryExist(dirPath))
     {
-        #ifdef _WIN32
-            _mkdir(dirPath.c_str());
-        #else
-            mkdir(dirPath.c_str(), 0777); // Use mkdir with permission flags on Unix
-        #endif
+#ifdef _WIN32
+        _mkdir(dirPath.c_str());
+#else
+        mkdir(dirPath.c_str(), 0777); // Use mkdir with permission flags on Unix
+#endif
     }
 }
 
@@ -1265,7 +1285,14 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
     displayClock(hours, minutes, seconds);
     while (true)
     {
+#ifdef __unix__
+        struct termios orig_termios;
+        enableRawMode(orig_termios);
+        command = getchar();
+        disableRawMode(orig_termios);
+#else
         cin >> command;
+#endif
 
         // Increment moves only when a valid move is made
         int prev_x = x;
