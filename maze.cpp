@@ -341,7 +341,7 @@ void displayMenu()
     while (true)
     {
         clear();
-        printw("----Main Menu----\n\n");
+        printw("----Main Menu----\n");
 
         for (int i = 0; i < 7; ++i)
         {
@@ -1874,7 +1874,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 else
                 {
                     cout << "gg\n";
-                    return;
+                    displayMenu();
                 }
             }
         }
