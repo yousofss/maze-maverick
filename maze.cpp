@@ -1936,11 +1936,11 @@ void hardMode()
     cin >> y;
     min_plen = x + y - 2;
     max_plen = x * y - 2;
-    cout << "Enter the path length: ";
+    cout << "Enter the path length between [" << min_plen << "," << max_plen << "]: ";
     cin >> path_length;
     while (path_length < min_plen || path_length > max_plen)
     {
-        cout << "Invalid path length. Please enter a value between " << min_plen << " and " << max_plen << ": ";
+        cout << "Invalid path length. Please enter a value between [" << min_plen << "," << max_plen << "]: ";
         cin >> path_length;
     }
     while (true)
@@ -1962,10 +1962,35 @@ void hardMode()
             break;
         }
     }
-    cout << "Please enter the path period's lower (a_l) and upper (a_u) bounds: ";
+    cout << "Please enter the cells period's lower and upper bounds: ";
     cin >> a_l >> a_u;
-    cout << "Please enter the lower (b_l) and upper (b_u) bounds for the rest of the grid: ";
+    while (true)
+    {
+        if (a_l > a_u)
+        {
+            cout << "Invalid bounds. Please enter the lower and upper bounds: ";
+            cin >> a_l >> a_u;
+        }
+        else
+        {
+            break;
+        }
+    }
+    cout << "Please enter the lower and upper bounds in range [0," << x * y - path_length << "] for blocks: ";
     cin >> b_l >> b_u;
+    while (true)
+    {
+        if (b_l < 0 || b_l > x * y - path_length || b_u < 0 || b_u > x * y - path_length)
+        {
+            cout << "Invalid bounds. Please enter values between [0, " << x * y - path_length << "]: ";
+            cin >> b_l >> b_u;
+        }
+        else
+        {
+            break;
+        }
+    }
+
     createDirectory("./Maps/");
     vector<vector<int>>
         grid = create_grid(x, y, a_l, a_u, b_l, b_u, path_length, gen);
