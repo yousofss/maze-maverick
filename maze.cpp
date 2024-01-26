@@ -192,9 +192,9 @@ vector<int> ImpossiblePathLengths(int x, int y, int path_length);
 
 bool isImpossiblePathLength(int x, int y, int path_length);
 
-void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int destY, int a_l, int a_u, int b_l, int b_u, int &path_sum, mt19937 &gen);
+void recursiveBacktrack(vector<vector<int>> &grid, vector<vector<bool>> &visited, int x, int y, int destX, int destY, int a_l, int a_u, int &path_sum, mt19937 &gen, vector<pair<int, int>> &pathCells, int &maxPathCells);
 
-vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen);
+vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen, vector<pair<int, int>> &path);
 
 void save_grid(const vector<vector<int>> &grid, const string &filename, int cell_width, int path_length, const string &mode, const string &playerName);
 
@@ -1184,8 +1184,8 @@ string displayMaps()
     {
         clear();
         printw("No maps found. Press any key to return to the menu.\n");
-        getch();  // Wait for user input
-        Select_Choice(2); 
+        getch(); // Wait for user input
+        Select_Choice(2);
     }
 
     while (true)
@@ -1230,7 +1230,6 @@ string displayMaps()
 #endif
     }
 }
-
 
 void saverec(const string &playerName, const chrono::seconds &game_duration, const string &filename, const string &mapname, bool win)
 {
@@ -1438,22 +1437,33 @@ bool isImpossiblePathLength(int x, int y, int path_length)
 }
 
 // Function to perform recursive backtracking and generate a path
-void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int destY, int a_l, int a_u, int &path_sum, mt19937 &gen, vector<pair<int, int>> &pathCells, int &maxPathCells)
+void recursiveBacktrack(vector<vector<int>> &grid, vector<vector<bool>> &visited, int x, int y, int destX, int destY, int a_l, int a_u, int &path_sum, mt19937 &gen, vector<pair<int, int>> &pathCells, int &maxPathCells)
 {
-    if (x < 0 || x >= grid.size() || y < 0 || y >= grid[0].size() || grid[x][y] != 0)
+    if (x < 0 || x >= grid.size() || y < 0 || y >= grid[0].size() || visited[x][y])
     {
         return;
     }
 
+    visited[x][y] = true; // Mark the cell as visited
+    pathCells.push_back({x, y});
     if (x == destX && y == destY)
     {
-        grid[x][y] = path_sum;
-        pathCells.push_back({x, y});
+        if (maxPathCells == 0) // Check if the path length is correct
+        {
+            grid[x][y] = path_sum;
+        }
+        else
+        {
+            visited[x][y] = false; // Unvisit the cell as path length is incorrect
+            pathCells.pop_back();
+        }
         return;
     }
 
     if (maxPathCells <= 0)
-    { // Check if maximum path length is reached
+    {
+        visited[x][y] = false; // Unvisit the cell as maximum path length reached
+        pathCells.pop_back();
         return;
     }
 
@@ -1463,8 +1473,7 @@ void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int 
         grid[x][y] = getRandomInt(a_l, a_u, gen);
     }
     path_sum += grid[x][y];
-    pathCells.push_back({x, y});
-    maxPathCells--; // Decrement the number of remaining cells that can be added to the path
+    maxPathCells--;
 
     vector<pair<int, int>> Orientations = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
     shuffle(Orientations.begin(), Orientations.end(), gen);
@@ -1474,33 +1483,30 @@ void recursiveBacktrack(vector<vector<int>> &grid, int x, int y, int destX, int 
         int newX = x + Orientation.first;
         int newY = y + Orientation.second;
 
-        int savedPathSum = path_sum;
-        vector<pair<int, int>> savedPath = pathCells;
-        int savedMaxPathCells = maxPathCells;
+        recursiveBacktrack(grid, visited, newX, newY, destX, destY, a_l, a_u, path_sum, gen, pathCells, maxPathCells);
 
-        recursiveBacktrack(grid, newX, newY, destX, destY, a_l, a_u, path_sum, gen, pathCells, maxPathCells);
-
-        if (grid[destX][destY] != 0)
+        if (grid[destX][destY] == path_sum)
         {
             return; // Path found
         }
-        else
-        {
-            path_sum = savedPathSum;
-            pathCells = savedPath;
-            maxPathCells = savedMaxPathCells;
-        }
     }
+
+    // Backtracking
+    visited[x][y] = false;
+    pathCells.pop_back();
+    path_sum -= grid[x][y];
+    // grid[x][y] = 0; // Reset the cell's value on backtracking
+    maxPathCells++;
 }
 
 vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen)
 {
     vector<vector<int>> grid(x, vector<int>(y, 0));
     vector<pair<int, int>> pathCells(path_length);
+    vector<vector<bool>> visited(grid.size(), vector<bool>(grid[0].size(), false));
     int path_sum = 0;
     // Generate path with random numbers within the range [a_l, a_u] excluding 0
-    recursiveBacktrack(grid, 0, 0, x - 1, y - 1, a_l, a_u, path_sum, gen, pathCells, path_length);
-
+    recursiveBacktrack(grid, visited, 0, 0, x - 1, y - 1, a_l, a_u, path_sum, gen, pathCells, path_length);
     for (int i = 0; i < x; i++)
     {
         for (int j = 0; j < y; j++)
@@ -1519,7 +1525,7 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
     if (b_l > x * y - path_length)
     {
         b_l = 0;
-        b_u = x * y - path_length;
+        b_u = x * y - path_length - 1;
     }
     int num_cells_to_change = getRandomInt(b_l, b_u, gen);
 
@@ -1528,7 +1534,7 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
     {
         int x_pos = getRandomInt(0, x - 1, gen);
         int y_pos = getRandomInt(0, y - 1, gen);
-        if (!(x_pos == 0 && y_pos == 0) && !(x_pos == x - 1 && y_pos == y - 1) && find(pathCells.begin(), pathCells.end(), make_pair(x_pos, y_pos)) == pathCells.end())
+        if (!(x_pos == 0 && y_pos == 0) && !(x_pos == x - 1 && y_pos == y - 1) && grid[x_pos][y_pos] != 0 && find(pathCells.begin(), pathCells.end(), make_pair(x_pos, y_pos)) == pathCells.end())
         {
             grid[x_pos][y_pos] = 0;
             cells_changed++;
@@ -1990,13 +1996,13 @@ void hardMode()
             break;
         }
     }
-    cout << "Please enter the lower and upper bounds in range [0," << x * y - path_length << "] for blocks: ";
+    cout << "Please enter the lower and upper bounds in range [0," << x * y - path_length - 1 << "] for blocks: ";
     cin >> b_l >> b_u;
     while (true)
     {
-        if (b_l < 0 || b_l > x * y - path_length || b_u < 0 || b_u > x * y - path_length)
+        if (b_l < 0 || b_l > x * y - path_length - 1 || b_u < 0 || b_u > x * y - path_length - 1)
         {
-            cout << "Invalid bounds. Please enter values between [0, " << x * y - path_length << "]: ";
+            cout << "Invalid bounds. Please enter values between [0, " << x * y - path_length - 1 << "]: ";
             cin >> b_l >> b_u;
         }
         else
