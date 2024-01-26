@@ -30,11 +30,11 @@ To get started, clone the repository to your local machine:
 git clone https://github.com/yousofs/maze-maverick.git
 ```
 ### Build the Project
-To build the game **On Windows**, navigate to the project directory and run the following commands:
+To build the game **on Windows**, navigate to the project directory and run the following commands:
 ```bash
 g++ -std=c++17 -o maze maze.cpp -lncurses
 ```
-To build the game on **MacOS and Linux**, navigate to the project directory and run the following commands:
+To build the game **on MacOS and Linux**, navigate to the project directory and run the following commands:
 ```bash
 g++ -std=c++17 -fcolor-diagnostics -fansi-escape-codes maze.cpp -o maze -lncurses
 ```
@@ -42,11 +42,15 @@ This will compile the game with the following flags:
 - **`-std=c++17`**: Compile with C++17 standards.
 - **`-fcolor-diagnostics`**: Enable color output in diagnostics (error and warning messages).
 - **`-fansi-escape-codes`**: Allow ANSI escape codes in diagnostics.
+- **`-lnurses`**: Link the game with PDCurses library (on windows) or ncurses library (on macOS and Linux).
 
 ### Run the Game
 After building, you can start the game by running in file directory:
 ```bash
-./maze_game
+./maze # on Linux and MacOS
+```
+```bash
+maze.exe # on Windows
 ```
 
 ## Features
