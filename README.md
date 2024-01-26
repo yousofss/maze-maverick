@@ -22,6 +22,7 @@ This C++ Maze Game offers a unique and engaging experience for both casual playe
 ### Prerequisites
 - **C++17 Compiler**: This game requires a compiler that supports C++17 standards.
 - **Operating System**: This game have two versions for Windows and Unix (Linux and MacOS). You can use global version for both Windows and Unix, and use other one for only Linux and MacOS.
+- **PDCurses**: If you are using **Windows**, you need to install PDCurses library. You can see the installation guide here: [StackOverFlow Answer](https://stackoverflow.com/a/69632679/16009366).
 
 ### Clone the Repository
 To get started, clone the repository to your local machine:
@@ -29,19 +30,18 @@ To get started, clone the repository to your local machine:
 git clone https://github.com/yousofs/maze-maverick.git
 ```
 ### Build the Project
-To build the **Global version** of the game, navigate to the project directory and run the following commands:
+To build the game **On Windows**, navigate to the project directory and run the following commands:
 ```bash
-g++ -std=c++17 -fcolor-diagnostics -fansi-escape-codes -g maze_global.cpp -o maze_game_global
+g++ -std=c++17 -o maze maze.cpp -lncurses
 ```
-To build the **Unix version** of the game on **MacOS and Linux**, navigate to the project directory and run the following commands:
+To build the game on **MacOS and Linux**, navigate to the project directory and run the following commands:
 ```bash
-g++ -std=gnu++14 -std=c++17 -fcolor-diagnostics -fansi-escape-codes -g maze_unix.cpp -o maze_game_unix -lncurses
+g++ -std=c++17 -fcolor-diagnostics -fansi-escape-codes maze.cpp -o maze -lncurses
 ```
 This will compile the game with the following flags:
 - **`-std=c++17`**: Compile with C++17 standards.
 - **`-fcolor-diagnostics`**: Enable color output in diagnostics (error and warning messages).
 - **`-fansi-escape-codes`**: Allow ANSI escape codes in diagnostics.
-- **`-g`**: Include debug information in the executable (useful for debugging).
 
 ### Run the Game
 After building, you can start the game by running in file directory:
