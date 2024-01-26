@@ -259,8 +259,7 @@ int main()
     displayMenu();
 }
 
-
-void displayrec(const string &filename, int &start, int count) 
+void displayrec(const string &filename, int &start, int count)
 {
     ifstream historyFile(filename);
     if (historyFile.is_open())
@@ -328,7 +327,6 @@ void displayrec(const string &filename, int &start, int count)
         cout << "Unable to open " << filename << " for reading player history.\n";
     }
 }
-
 
 void displayMenu()
 {
@@ -1505,7 +1503,13 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
         }
     }
     // change some non-path cells to 0 but not the start and end cells and also not the cells in the path (pathCells)
+    if (b_l > x * y - path_length)
+    {
+        b_l = 0;
+        b_u = x * y - path_length;
+    }
     int num_cells_to_change = getRandomInt(b_l, b_u, gen);
+
     int cells_changed = 0;
     while (cells_changed < num_cells_to_change)
     {
@@ -1543,7 +1547,6 @@ void save_grid(const vector<vector<int>> &grid, const string &filename, int cell
 
         file.close();
         cout << "Grid saved to " << full_filepath << endl;
-        cout << "Press enter to continue." << endl;
     }
     else
     {
