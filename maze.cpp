@@ -1556,6 +1556,7 @@ void save_grid(const vector<vector<int>> &grid, const string &filename, int cell
 
 void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &path)
 {
+    clear_screen();
     int largest_num = 0;
     for (const auto &row : grid)
     {
@@ -2247,6 +2248,7 @@ void solveMaze(vector<vector<int>> &maze, int maxPathLength)
 
 void display_SolvedMaze(const vector<vector<int>> &grid, const vector<vector<pair<bool, Direction>>> &path)
 {
+    clear_screen();
     int largest_num = 0;
     for (const auto &row : grid)
     {
