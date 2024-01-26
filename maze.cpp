@@ -281,10 +281,10 @@ void displayrec(const string &filename, int &start, int count)
             int duration;
             bool win;
             if (getline(iss, playerName, ',') &&
-                (iss >> duration) && iss.ignore() &&
-                getline(iss, date, ',') &&
                 getline(iss, mapname, ',') &&
-                getline(iss, resultString, ','))
+                (iss >> duration) && iss.ignore() &&
+                getline(iss, resultString, ',') &&
+                getline(iss, date, ','))
             {
                 win = (resultString == "win");
                 playerRecords.push_back({playerName, mapname, duration, win, date});
@@ -1167,6 +1167,7 @@ string displayMaps()
     string pathaddress = "./Maps";
     vector<string> Menu;
     int pointer = 0;
+
     for (const auto &entry : fs::directory_iterator(pathaddress))
     {
 #ifdef _WIN32
@@ -1175,7 +1176,18 @@ string displayMaps()
         Menu.push_back(entry.path().filename());
 #endif
     }
+
     int menuSize = Menu.size();
+
+    // Check if there are no maps
+    if (menuSize == 0)
+    {
+        clear();
+        printw("No maps found. Press any key to return to the menu.\n");
+        getch();  // Wait for user input
+        Select_Choice(2); 
+    }
+
     while (true)
     {
         clear();
@@ -1218,6 +1230,7 @@ string displayMaps()
 #endif
     }
 }
+
 
 void saverec(const string &playerName, const chrono::seconds &game_duration, const string &filename, const string &mapname, bool win)
 {
@@ -1831,7 +1844,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 else
                 {
                     cout << "gg\n";
-                    displayMenu();
+                    exit(0);
                 }
             }
             else
@@ -1874,7 +1887,7 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 else
                 {
                     cout << "gg\n";
-                    displayMenu();
+                    exit(0);
                 }
             }
         }
