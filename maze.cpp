@@ -1514,7 +1514,7 @@ vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u
             if (grid[i][j] == 0)
             {
                 grid[i][j] = getRandomInt(a_l, a_u, gen);
-                if (grid[i][j] == 0)
+                while (grid[i][j] == 0)
                 {
                     grid[i][j] = getRandomInt(a_l, a_u, gen);
                 }
@@ -2289,9 +2289,18 @@ void display_SolvedMaze(const vector<vector<int>> &grid, const vector<vector<pai
             }
             else if (path[i][j].first)
             {
-                cout << setw(pad_left) << ""
-                     << "\033[38;5;198m" << path[i][j].second.symbol << cell << "\x1B[0m" << setw(pad_right) << ""
-                     << "|"; // Path cells in pink
+                if (path[i][j].second.symbol == "←")
+                {
+                    cout << setw(pad_left) << ""
+                         << "\033[38;5;198m" << cell << path[i][j].second.symbol << "\x1B[0m" << setw(pad_right) << ""
+                         << "|";
+                }
+                else
+                {
+                    cout << setw(pad_left) << ""
+                         << "\033[38;5;198m" << path[i][j].second.symbol << cell << "\x1B[0m" << setw(pad_right) << ""
+                         << "|"; // Path cells in pink
+                }
             }
             else
             {
