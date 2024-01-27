@@ -13,6 +13,8 @@
 #include <deque>
 #include <cstdlib>
 #include <thread>
+#include <set>
+#include <random>
 
 #define TEXTTABLE_ENCODE_MULTIBYTE_STRINGS
 #define TEXTTABLE_USE_EN_US_UTF8
@@ -71,6 +73,20 @@ struct Direction
     Direction(int x, int y, const string &s) : dx(x), dy(y), symbol(s) {}
 };
 
+struct Point
+{
+    int x, y;
+    Point(int x, int y) : x(x), y(y) {}
+    bool operator<(const Point &p) const
+    {
+        return x < p.x || (x == p.x && y < p.y);
+    }
+    bool operator==(const Point &other) const
+    {
+        return x == other.x && y == other.y;
+    }
+};
+
 struct PlayerRecord
 {
     string playerName;
@@ -126,12 +142,15 @@ void clear_screen()
 {
     cout << "\x1B[2J\x1B[H"; // ANSI escape codes to clear the screen
 }
-int getRandomInt(int a_l, int a_u, mt19937 &gen)
+int getRandomInt(int a_l, int a_u, mt19937 &rng)
 {
-    uniform_int_distribution<> dis_a(a_l, a_u);
-    return dis_a(gen);
+    int num;
+    do
+    {
+        num = rng() % (a_u - a_l + 1) + a_l;
+    } while (num == 0); // Ensure the number is not zero
+    return num;
 }
-
 string findfile(const string &path)
 {
     auto last_slash = max(path.find_last_of('/'), path.find_last_of('\\'));
@@ -1436,110 +1455,99 @@ bool isImpossiblePathLength(int x, int y, int path_length)
     return true;
 }
 
-// Function to perform recursive backtracking and generate a path
-void recursiveBacktrack(vector<vector<int>> &grid, vector<vector<bool>> &visited, int x, int y, int destX, int destY, int a_l, int a_u, int &path_sum, mt19937 &gen, vector<pair<int, int>> &pathCells, int &maxPathCells)
+bool generatePath(vector<vector<int>> &grid, vector<Point> &path, int x, int y, int px, int py, int pathLength, int a_l, int a_u, mt19937 &rng)
 {
-    if (x < 0 || x >= grid.size() || y < 0 || y >= grid[0].size() || visited[x][y])
+    // Stop path one cell before reaching bottom-right corner
+    if (path.size() == pathLength || (px == x - 1 && py == y - 1))
     {
-        return;
+        return path.size() == pathLength; // Return true only if path length is reached
     }
 
-    visited[x][y] = true; // Mark the cell as visited
-    pathCells.push_back({x, y});
-    if (x == destX && y == destY)
+    if (px < 0 || py < 0 || px >= x || py >= y || find(path.begin(), path.end(), Point(px, py)) != path.end())
     {
-        if (maxPathCells == 0) // Check if the path length is correct
+        return false; // Out of bounds or already visited
+    }
+
+    path.emplace_back(px, py);
+    do
+    {
+        grid[px][py] = getRandomInt(a_l, a_u, rng);
+    } while (grid[px][py] == 0); // Ensure path cells are not zero
+
+    vector<pair<int, int>> directions = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+    shuffle(directions.begin(), directions.end(), rng); // Randomize directions
+
+    for (const auto &dir : directions)
+    {
+        if (generatePath(grid, path, x, y, px + dir.first, py + dir.second, pathLength, a_l, a_u, rng))
         {
-            grid[x][y] = path_sum;
-        }
-        else
-        {
-            visited[x][y] = false; // Unvisit the cell as path length is incorrect
-            pathCells.pop_back();
-        }
-        return;
-    }
-
-    if (maxPathCells <= 0)
-    {
-        visited[x][y] = false; // Unvisit the cell as maximum path length reached
-        pathCells.pop_back();
-        return;
-    }
-
-    grid[x][y] = getRandomInt(a_l, a_u, gen);
-    while (grid[x][y] == 0)
-    {
-        grid[x][y] = getRandomInt(a_l, a_u, gen);
-    }
-    path_sum += grid[x][y];
-    maxPathCells--;
-
-    vector<pair<int, int>> Orientations = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
-    shuffle(Orientations.begin(), Orientations.end(), gen);
-
-    for (const auto &Orientation : Orientations)
-    {
-        int newX = x + Orientation.first;
-        int newY = y + Orientation.second;
-
-        recursiveBacktrack(grid, visited, newX, newY, destX, destY, a_l, a_u, path_sum, gen, pathCells, maxPathCells);
-
-        if (grid[destX][destY] == path_sum)
-        {
-            return; // Path found
+            return true;
         }
     }
 
-    // Backtracking
-    visited[x][y] = false;
-    pathCells.pop_back();
-    path_sum -= grid[x][y];
-    // grid[x][y] = 0; // Reset the cell's value on backtracking
-    maxPathCells++;
+    path.pop_back(); // Remove last point if path is not feasible
+    grid[px][py] = 0;
+    return false;
 }
 
-vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen)
+void generateMaze(vector<vector<int>> &grid, int x, int y, int a_l, int a_u, int pathLength, int b_l, int b_u)
 {
-    vector<vector<int>> grid(x, vector<int>(y, 0));
-    vector<pair<int, int>> pathCells(path_length);
-    vector<vector<bool>> visited(grid.size(), vector<bool>(grid[0].size(), false));
-    int path_sum = 0;
-    // Generate path with random numbers within the range [a_l, a_u] excluding 0
-    recursiveBacktrack(grid, visited, 0, 0, x - 1, y - 1, a_l, a_u, path_sum, gen, pathCells, path_length);
-    for (int i = 0; i < x; i++)
+    grid = vector<vector<int>>(x, vector<int>(y, 0));
+    mt19937 rng(time(nullptr)); // Mersenne Twister random number generator
+
+    vector<Point> path;
+    if (!generatePath(grid, path, x, y, 0, 0, pathLength, a_l, a_u, rng))
     {
-        for (int j = 0; j < y; j++)
+        cout << "Unable to create a path of the specified length." << endl;
+        return;
+    }
+
+    // Fill the rest of the maze and place blocks
+    int blockCount;
+    if (b_l == 0 && b_u == 0)
+    {
+        blockCount = 0;
+    }
+    else
+    {
+        blockCount = getRandomInt(b_l, b_u, rng);
+    }
+    int placedBlocks = 0;
+
+    for (int i = 0; i < x; ++i)
+    {
+        for (int j = 0; j < y; ++j)
         {
-            if (grid[i][j] == 0)
+            if (find(path.begin(), path.end(), Point(i, j)) == path.end())
             {
-                grid[i][j] = getRandomInt(a_l, a_u, gen);
-                while (grid[i][j] == 0)
+                if (placedBlocks < blockCount)
                 {
-                    grid[i][j] = getRandomInt(a_l, a_u, gen);
+                    grid[i][j] = 0;
+                    placedBlocks++;
+                }
+                else
+                {
+                    grid[i][j] = getRandomInt(a_l, a_u, rng);
                 }
             }
         }
     }
-    // change some non-path cells to 0 but not the start and end cells and also not the cells in the path (pathCells)
-    if (b_l > x * y - path_length)
-    {
-        b_l = 0;
-        b_u = x * y - path_length - 1;
-    }
-    int num_cells_to_change = getRandomInt(b_l, b_u, gen);
 
-    int cells_changed = 0;
-    while (cells_changed < num_cells_to_change)
+    // Calculate sum of path cells
+    int sum = 0;
+    for (const auto &p : path)
     {
-        int x_pos = getRandomInt(0, x - 1, gen);
-        int y_pos = getRandomInt(0, y - 1, gen);
-        if (!(x_pos == 0 && y_pos == 0) && !(x_pos == x - 1 && y_pos == y - 1) && grid[x_pos][y_pos] != 0 && find(pathCells.begin(), pathCells.end(), make_pair(x_pos, y_pos)) == pathCells.end())
-        {
-            grid[x_pos][y_pos] = 0;
-            cells_changed++;
-        }
+        sum += grid[p.x][p.y];
     }
+
+    // Set end cell value
+    grid[x - 1][y - 1] = sum;
+}
+
+vector<vector<int>> create_grid(int x, int y, int a_l, int a_u, int b_l, int b_u, int path_length, mt19937 &gen)
+{
+    vector<vector<int>> grid;
+    generateMaze(grid, x, y, a_l, a_u, path_length, b_l, b_u);
     return grid;
 }
 
@@ -1759,6 +1767,11 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
                 moves++;
                 ncount = 4;
             }
+            else if (x == grid.size() - 1 && y == grid[0].size() - 1) // if the player is in the last cell
+            {
+                moves++;
+                ncount = 4;
+            }
             else
             {
                 x = prev_x;
@@ -1770,6 +1783,11 @@ void handle_commands(vector<vector<int>> &grid, vector<vector<bool>> &path, int 
         case 'd':
             y++;
             if (y < grid[0].size() && grid[x][y] != 0 && !path[x][y]) // valid move
+            {
+                moves++;
+                ncount = 4;
+            }
+            else if (x == grid.size() - 1 && y == grid[0].size() - 1) // if the player is in the last cell
             {
                 moves++;
                 ncount = 4;
@@ -1955,6 +1973,11 @@ void hardMode()
     cin >> y;
     min_plen = x + y - 2;
     max_plen = x * y - 2;
+    if ((min_plen % 2 == 0 && max_plen % 2 == 1) || (min_plen % 2 == 1 && max_plen % 2 == 0))
+    {
+        max_plen--;
+    }
+
     cout << "Enter the path length between [" << min_plen << "," << max_plen << "]: ";
     cin >> path_length;
     while (path_length < min_plen || path_length > max_plen)
@@ -2011,8 +2034,7 @@ void hardMode()
     }
 
     createDirectory("./Maps/");
-    vector<vector<int>>
-        grid = create_grid(x, y, a_l, a_u, b_l, b_u, path_length, gen);
+    vector<vector<int>> grid = create_grid(x, y, a_l, a_u, b_l, b_u, path_length, gen);
     string mapname;
     cout << "Say your grid name : ";
     cin >> mapname;
@@ -2182,6 +2204,10 @@ void displayLeaderboard(const string &filename)
 //  function to check if a move is valid or not
 bool isValidMove(int x, int y, const vector<vector<int>> &maze, const vector<vector<pair<bool, Direction>>> &visited)
 {
+    if (x == maze.size() - 1 && y == maze[0].size() - 1)
+    {
+        return true;
+    }
     return x >= 0 && x < maze.size() && y >= 0 && y < maze[0].size() && maze[x][y] != 0 && !visited[x][y].first;
 }
 
@@ -2245,6 +2271,7 @@ void solveMaze(vector<vector<int>> &maze, int maxPathLength)
 
 void display_SolvedMaze(const vector<vector<int>> &grid, const vector<vector<pair<bool, Direction>>> &path)
 {
+    clear_screen();
     int largest_num = 0;
     for (const auto &row : grid)
     {
