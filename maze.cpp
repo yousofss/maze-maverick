@@ -15,6 +15,7 @@
 #include <thread>
 #include <set>
 #include <random>
+#include <limits>
 
 #define TEXTTABLE_ENCODE_MULTIBYTE_STRINGS
 #define TEXTTABLE_USE_EN_US_UTF8
@@ -162,6 +163,49 @@ string findfile(const string &path)
     replace(file_name.begin(), file_name.end(), '_', ' ');
 
     return file_name;
+}
+
+int getIntegerInput(const string &prompt)
+{
+    int value;
+    while (true)
+    {
+        cout << prompt;
+        cin >> value;
+
+        if (cin.fail())
+        {
+            cin.clear();                                         // Clear the error flags
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Ignore the rest of the line
+            cout << "Invalid input. Please enter an integer.\n";
+        }
+        else
+        {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Ignore the rest of the line
+            return value;
+        }
+    }
+}
+
+void getTwoIntegerInputs(const string &prompt, int &val1, int &val2)
+{
+    while (true)
+    {
+        cout << prompt;
+        cin >> val1 >> val2;
+
+        if (cin.fail())
+        {
+            cin.clear();                                         // Clear the error flags
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Ignore the rest of the line
+            cout << "Invalid input. Please enter two integers.\n";
+        }
+        else
+        {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Ignore the rest of the line
+            break;
+        }
+    }
 }
 
 bool doesFileExist(const string &filePath)
@@ -1930,10 +1974,8 @@ void easyMode()
     clear_screen();
     int x, y, a_l = -3, a_u = 3, b_l = 2, b_u = 5, path_length;
     int min_plen, max_plen;
-    cout << "Enter the number of rows: ";
-    cin >> x;
-    cout << "Enter the number of columns: ";
-    cin >> y;
+    x = getIntegerInput("Enter the number of rows: ");
+    y = getIntegerInput("Enter the number of columns: ");
     path_length = x + y - 2;
     cout << "Path length: " << path_length << endl;
     createDirectory("./Maps/");
@@ -1967,10 +2009,8 @@ void hardMode()
     clear_screen();
     int x, y, a_l, a_u, b_l, b_u, path_length;
     int min_plen, max_plen;
-    cout << "Enter the number of rows: ";
-    cin >> x;
-    cout << "Enter the number of columns: ";
-    cin >> y;
+    x = getIntegerInput("Enter the number of rows: ");
+    y = getIntegerInput("Enter the number of columns: ");
     min_plen = x + y - 2;
     max_plen = x * y - 2;
     if ((min_plen % 2 == 0 && max_plen % 2 == 1) || (min_plen % 2 == 1 && max_plen % 2 == 0))
@@ -1978,12 +2018,10 @@ void hardMode()
         max_plen--;
     }
 
-    cout << "Enter the path length between [" << min_plen << "," << max_plen << "]: ";
-    cin >> path_length;
+    path_length = getIntegerInput("Enter the path length between [" + to_string(min_plen) + "," + to_string(max_plen) + "]: ");
     while (path_length < min_plen || path_length > max_plen)
     {
-        cout << "Invalid path length. Please enter a value between [" << min_plen << "," << max_plen << "]: ";
-        cin >> path_length;
+        path_length = getIntegerInput("Invalid path length. Please enter a value between [" + to_string(min_plen) + "," + to_string(max_plen) + "]: ");
     }
     while (true)
     {
@@ -1996,36 +2034,31 @@ void hardMode()
             {
                 cout << length << " ";
             }
-            cout << "\nplease provide me a possible path_length : ";
-            cin >> path_length;
+            path_length = getIntegerInput("please provide me a possible path_length : ");
         }
         else
         {
             break;
         }
     }
-    cout << "Please enter the cells period's lower and upper bounds: ";
-    cin >> a_l >> a_u;
+    getTwoIntegerInputs("Please enter the cells period's lower and upper bounds: ", a_l, a_u);
     while (true)
     {
         if (a_l > a_u)
         {
-            cout << "Invalid bounds. Please enter the lower and upper bounds: ";
-            cin >> a_l >> a_u;
+            getTwoIntegerInputs("Invalid bounds. Please enter the lower and upper bounds: ", a_l, a_u);
         }
         else
         {
             break;
         }
     }
-    cout << "Please enter the lower and upper bounds in range [0," << (x * y - path_length) - 1 << "] for blocks: ";
-    cin >> b_l >> b_u;
+    getTwoIntegerInputs("Please enter the lower and upper bounds in range [0," + to_string((x * y - path_length) - 1) + "] for blocks: ", b_l, b_u);
     while (true)
     {
         if (b_l < 0 || b_l > (x * y - path_length) - 1 || b_u < 0 || b_u > (x * y - path_length) - 1)
         {
-            cout << "Invalid bounds. Please enter values between [0, " << (x * y - path_length) - 1 << "]: ";
-            cin >> b_l >> b_u;
+            getTwoIntegerInputs("Invalid bounds. Please enter values between [0, " + to_string((x * y - path_length) - 1) + "]: ", b_l, b_u);
         }
         else
         {
