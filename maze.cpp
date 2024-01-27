@@ -1575,7 +1575,6 @@ void save_grid(const vector<vector<int>> &grid, const string &filename, int cell
 
 void display_grid(const vector<vector<int>> &grid, const vector<vector<bool>> &path)
 {
-    clear_screen();
     int largest_num = 0;
     for (const auto &row : grid)
     {
@@ -1996,13 +1995,13 @@ void hardMode()
             break;
         }
     }
-    cout << "Please enter the lower and upper bounds in range [0," << x * y - path_length - 1 << "] for blocks: ";
+    cout << "Please enter the lower and upper bounds in range [0," << (x * y - path_length) - 1 << "] for blocks: ";
     cin >> b_l >> b_u;
     while (true)
     {
-        if (b_l < 0 || b_l > x * y - path_length - 1 || b_u < 0 || b_u > x * y - path_length - 1)
+        if (b_l < 0 || b_l > (x * y - path_length) - 1 || b_u < 0 || b_u > (x * y - path_length) - 1)
         {
-            cout << "Invalid bounds. Please enter values between [0, " << x * y - path_length - 1 << "]: ";
+            cout << "Invalid bounds. Please enter values between [0, " << (x * y - path_length) - 1 << "]: ";
             cin >> b_l >> b_u;
         }
         else
@@ -2228,25 +2227,6 @@ bool dfs(vector<vector<int>> &maze, vector<vector<pair<bool, Direction>>> &visit
     return false;
 }
 
-void printPath(const vector<vector<pair<bool, Direction>>> &visited)
-{
-    for (int i = 0; i < visited.size(); i++)
-    {
-        for (int j = 0; j < visited[i].size(); j++)
-        {
-            if (visited[i][j].first)
-            {
-                // Adjust the spacing based on the position
-                for (int k = 0; k < j; k++)
-                {
-                    cout << " ";
-                }
-                cout << "\033[38;5;118m " << visited[i][j].second.symbol << "\x1B[0m\n";
-            }
-        }
-    }
-}
-
 void solveMaze(vector<vector<int>> &maze, int maxPathLength)
 {
     int targetSum = maze.back().back();
@@ -2256,8 +2236,6 @@ void solveMaze(vector<vector<int>> &maze, int maxPathLength)
     if (dfs(maze, visited, 0, 0, 0, targetSum, maxPathLength, pathLength))
     {
         display_SolvedMaze(maze, visited);
-        cout << "Path:\n";
-        printPath(visited);
     }
     else
     {
@@ -2267,7 +2245,6 @@ void solveMaze(vector<vector<int>> &maze, int maxPathLength)
 
 void display_SolvedMaze(const vector<vector<int>> &grid, const vector<vector<pair<bool, Direction>>> &path)
 {
-    clear_screen();
     int largest_num = 0;
     for (const auto &row : grid)
     {
@@ -2282,7 +2259,7 @@ void display_SolvedMaze(const vector<vector<int>> &grid, const vector<vector<pai
     cout << "+";
     for (int j = 0; j < grid[0].size(); j++)
     {
-        cout << setw(cell_width + 1) << setfill('-') << "+" << setfill(' ');
+        cout << setw(cell_width + 2) << setfill('-') << "+" << setfill(' ');
     }
     cout << "\n";
 
@@ -2301,34 +2278,36 @@ void display_SolvedMaze(const vector<vector<int>> &grid, const vector<vector<pai
             if (i == 0 && j == 0)
             {
                 cout << setw(pad_left) << ""
-                     << "\033[38;5;76m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "\033[38;5;76m" << cell << "\x1B[0m" << setw(pad_right + 1) << ""
                      << "|"; // Start position in green
             }
             else if (i == grid.size() - 1 && j == grid[0].size() - 1)
             {
                 cout << setw(pad_left) << ""
-                     << "\033[38;5;21m" << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "\033[38;5;21m" << cell << "\x1B[0m" << setw(pad_right + 1) << ""
                      << "|"; // End position in blue
             }
             else if (path[i][j].first)
             {
                 cout << setw(pad_left) << ""
-                     << "\033[38;5;198m" << cell << "\x1B[0m" << setw(pad_right) << ""
-                     << "|"; // Cells in the path in pink
+                     << "\033[38;5;198m" << path[i][j].second.symbol << cell << "\x1B[0m" << setw(pad_right) << ""
+                     << "|"; // Path cells in pink
             }
             else
             {
-                cout << setw(pad_left) << "" << cell << setw(pad_right) << ""
+                cout << setw(pad_left + 1) << "" << cell << setw(pad_right) << ""
                      << "|";
             }
         }
+
+        // Print right border and newline
         cout << "\n";
 
         // Print bottom border
         cout << "+";
         for (int j = 0; j < grid[0].size(); j++)
         {
-            cout << setw(cell_width + 1) << setfill('-') << "+" << setfill(' ');
+            cout << setw(cell_width + 2) << setfill('-') << "+" << setfill(' ');
         }
         cout << "\n";
     }
